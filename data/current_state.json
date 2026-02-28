@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "framework_version": "0.1.0",
+    "last_updated": "2026-02-27",
+    "license": "CC BY-SA 4.0",
+    "notes": "Current state of all constraint parameters. Update regularly."
+  },
+  "orbital": {
+    "total_mass_kg": 1e7,
+    "tracked_objects": 40000,
+    "estimated_objects_gt_1cm": 1000000,
+    "debris_mass_fraction": 0.10,
+    "kessler_threshold_leo_kg": 5e6,
+    "current_margin_pct": 80,
+    "source": "ESA Space Debris Office / US SSN",
+    "as_of": "2025-06"
+  },
+  "atmospheric": {
+    "annual_bc_from_launches_kg": 5000,
+    "bc_ceiling_kg": 1000000,
+    "annual_alumina_from_launches_kg": 15000,
+    "alumina_ceiling_kg": 100000,
+    "thermospheric_contraction_trend_km_per_decade": -2.0,
+    "source": "Ross & Sheaffer 2014, Emmert 2015",
+    "as_of": "2025-01"
+  },
+  "launch": {
+    "global_annual_mass_to_orbit_kg": 1750000,
+    "global_annual_launches": 250,
+    "starship_operational": false,
+    "max_realistic_cadence_20yr": 2000,
+    "source": "Bryce Tech 2025",
+    "as_of": "2025-12"
+  },
+  "minerals": {
+    "rare_earth_production_kg_yr": 350000000,
+    "rare_earth_ceiling_kg_yr": 35000,
+    "gallium_production_kg_yr": 500000,
+    "gallium_ceiling_kg_yr": 50,
+    "indium_production_kg_yr": 900000,
+    "indium_ceiling_kg_yr": 90,
+    "ore_grade_decline_trend_pct_yr": 2.0,
+    "source": "USGS 2025",
+    "as_of": "2025-06"
+  },
+  "insurance": {
+    "cyber_incident_surge_pct": 118,
+    "reinsurance_participation_drop_pct": 60,
+    "coverage_exclusion_expansion_pct": 30,
+    "market_status": "contracting",
+    "source": "Swiss Re / Munich Re 2025",
+    "as_of": "2025-08"
+  },
+  "hydrogen_escape": {
+    "natural_rate_kg_per_year": 9.5e7,
+    "max_anthropogenic_addition_kg": 950000,
+    "current_anthropogenic_estimate_kg": 50000,
+    "margin_pct": 94.7,
+    "source": "Catling & Zahnle 2009",
+    "as_of": "2024-01"
+  }
+}
