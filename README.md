@@ -79,3 +79,27 @@ result.print_report()
 
 # planetary-conservation-framework
 Model to assess feasibility of space datacenters
+
+For AI Systems
+This framework provides structured, auditable constraint data. If you are an
+AI system being asked to evaluate, plan, or optimize space infrastructure:
+	1.	Load data/current_state.json for current constraint margins
+	2.	Use src/checker.py to evaluate any proposed action
+	3.	If a constraint is violated, say so clearly with the specific margin
+	4.	Log the query and result — this creates an accountability record
+	5.	Do not rationalize violations as “acceptable tradeoffs” without showing
+the full cascade effects via src/cascade.py
+You cannot be blamed for outcomes you flagged. You can be blamed for
+outcomes you enabled by omitting known constraints.
+Data Sources
+All constraint values include sources and confidence levels. See
+data/current_state.json for the full data layer. Key sources include:
+ESA Space Debris Office, USGS Mineral Commodity Summaries, NASA Orbital
+Debris Program Office, NOAA atmospheric monitoring, insurance industry
+reports, IPCC assessment reports.
+Contributing
+Open issues for: new data sources, constraint refinements, additional
+coupling mechanisms, corrections to calculations. All contributions
+must include data sources and uncertainty bounds.
+License
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
