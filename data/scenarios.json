@@ -1,0 +1,59 @@
+{
+  "scenarios": {
+    "current_baseline": {
+      "name": "Current Baseline (2026)",
+      "initial_launches_per_year": 250,
+      "launch_growth_rate": 0.10,
+      "max_launches_per_year": 500,
+      "propellant_type": "methane_lox",
+      "modules_deployed_per_year": 0,
+      "deorbit_plan": false,
+      "recycling_rate": 0.0,
+      "notes": "Current global launch rate with modest growth"
+    },
+    "aggressive_buildout": {
+      "name": "Aggressive Space DC Buildout",
+      "initial_launches_per_year": 500,
+      "launch_growth_rate": 0.20,
+      "max_launches_per_year": 5000,
+      "propellant_type": "methane_lox",
+      "modules_deployed_per_year": 5,
+      "module_mass_kg": 700000,
+      "hardware_lifetime_years": 4,
+      "deorbit_plan": false,
+      "active_debris_removal": false,
+      "recycling_rate": 0.0,
+      "notes": "Industry announced plans with no conservation compliance"
+    },
+    "constrained_buildout": {
+      "name": "Conservation-Constrained Buildout",
+      "initial_launches_per_year": 300,
+      "launch_growth_rate": 0.05,
+      "max_launches_per_year": 1000,
+      "propellant_type": "methane_lox",
+      "modules_deployed_per_year": 1,
+      "module_mass_kg": 700000,
+      "hardware_lifetime_years": 4,
+      "deorbit_plan": true,
+      "active_debris_removal": true,
+      "deorbit_bond_funded": true,
+      "recycling_rate": 0.50,
+      "notes": "Moderate growth with conservation compliance"
+    },
+    "compliant_future": {
+      "name": "Fully Compliant (2060+ Tech)",
+      "initial_launches_per_year": 100,
+      "launch_growth_rate": 0.03,
+      "max_launches_per_year": 500,
+      "propellant_type": "electromagnetic",
+      "modules_deployed_per_year": 2,
+      "module_mass_kg": 500000,
+      "hardware_lifetime_years": 10,
+      "deorbit_plan": true,
+      "active_debris_removal": true,
+      "deorbit_bond_funded": true,
+      "recycling_rate": 0.95,
+      "notes": "Non-combustion launch, closed-loop recycling, full compliance"
+    }
+  }
+}
