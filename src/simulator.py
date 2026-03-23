@@ -9,6 +9,7 @@ Copyright (c) 2026 Kavik
 """
 
 import random
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from copy import deepcopy
@@ -91,6 +92,7 @@ class ScenarioConfig:
 
     # Feedback parameters
     soot_per_launch_kg: float = 50.0
+    bc_residence_time_years: float = 4.0  # mesospheric BC residence time
     debris_generation_rate: float = 0.001
     ore_grade_decline_rate: float = 0.02
 
@@ -123,7 +125,7 @@ class Simulator:
         """Run a single simulation."""
         state = SystemState()
         history = [deepcopy(state)]
-        cfg = self.config
+        cfg = deepcopy(self.config)  # isolate config mutations per run
 
         for year in range(1, cfg.duration_years + 1):
             state.year = year
@@ -210,11 +212,26 @@ class Simulator:
                 state.kessler_cascade_triggered = True
 
             # ── Atmospheric effects ──
+            # BC decays with finite atmospheric residence time
+            decay_factor = math.exp(-1.0 / cfg.bc_residence_time_years)
+            state.bc_accumulated_kg *= decay_factor
             state.bc_accumulated_kg += actual_launches * cfg.soot_per_launch_kg
             state.thermospheric_heating_w_m2 = (
                 state.bc_accumulated_kg * 1e-6
             )
-            state.h2o_injected_kg += actual_launches * 1_800_000
+
+            # H2O injection depends on propellant type
+            h2o_factors = {
+                "methane_lox": 0.39,
+                "kerosene_lox": 0.39,
+                "hydrogen_lox": 0.9,
+                "solid": 0.15,
+            }
+            h2o_fraction = h2o_factors.get(cfg.propellant_type, 0.0)
+            propellant_per_launch = 4_600_000  # default (Starship-class)
+            state.h2o_injected_kg += (
+                actual_launches * propellant_per_launch * h2o_fraction
+            )
 
             # Thermospheric feedback
             if state.thermospheric_heating_w_m2 > 0.005:

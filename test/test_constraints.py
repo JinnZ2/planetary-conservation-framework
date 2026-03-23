@@ -60,6 +60,32 @@ class TestWaterBudget(unittest.TestCase):
         self.assertNotEqual(result.status, ConstraintStatus.VIOLATED)
 
 
+    def test_kerosene_lox_handled(self):
+        c = PlanetaryWaterBudget()
+        result = c.evaluate({
+            "launches_per_year": 50,
+            "propellant_type": "kerosene_lox",
+            "propellant_per_launch_kg": 4_600_000
+        })
+        self.assertNotEqual(result.status, ConstraintStatus.VIOLATED)
+        self.assertGreater(result.current_value, 0)
+
+    def test_hydrogen_lox_produces_more_h2o(self):
+        c = PlanetaryWaterBudget()
+        methane = c.evaluate({
+            "launches_per_year": 100,
+            "propellant_type": "methane_lox",
+            "propellant_per_launch_kg": 2_000_000
+        })
+        hydrogen = c.evaluate({
+            "launches_per_year": 100,
+            "propellant_type": "hydrogen_lox",
+            "propellant_per_launch_kg": 2_000_000
+        })
+        # H2/LOX produces more H2O per kg propellant than methane/LOX
+        self.assertGreater(hydrogen.current_value, methane.current_value)
+
+
 class TestAtmosphericComposition(unittest.TestCase):
     def test_zero_launches_safe(self):
         c = AtmosphericComposition()
@@ -74,6 +100,14 @@ class TestAtmosphericComposition(unittest.TestCase):
         result = c.evaluate({
             "launches_per_year": 10000,
             "propellant_type": "electromagnetic"
+        })
+        self.assertEqual(result.status, ConstraintStatus.SAFE)
+
+    def test_hydrogen_lox_safe(self):
+        c = AtmosphericComposition()
+        result = c.evaluate({
+            "launches_per_year": 10000,
+            "propellant_type": "hydrogen_lox"
         })
         self.assertEqual(result.status, ConstraintStatus.SAFE)
 
@@ -181,6 +215,25 @@ class TestThermosphericBalance(unittest.TestCase):
             "propellant_type": "electromagnetic"
         })
         self.assertEqual(result.status, ConstraintStatus.SAFE)
+
+    def test_steady_state_heating_model(self):
+        """Heating should reflect steady-state BC (annual × residence time)."""
+        c = ThermosphericBalance()
+        result = c.evaluate({
+            "launches_per_year": 100,
+            "propellant_type": "methane_lox"
+        })
+        # 100 launches × 50 kg BC × 4 yr residence × 1e-6 = 0.02 W/m²
+        expected_heating = 100 * 50 * 4.0 * 1e-6
+        self.assertAlmostEqual(result.current_value, expected_heating, places=6)
+
+    def test_solid_produces_soot(self):
+        c = ThermosphericBalance()
+        result = c.evaluate({
+            "launches_per_year": 100,
+            "propellant_type": "solid"
+        })
+        self.assertGreater(result.current_value, 0)
 
 
 class TestEvaluateAll(unittest.TestCase):

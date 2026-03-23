@@ -147,13 +147,13 @@ class ConstraintChecker:
         # Evaluate all constraints
         results = evaluate_all(proposal)
 
-        # Identify violations
+        # Identify hard violations and critical warnings
         violations = [r for r in results
-                      if r.status in (ConstraintStatus.VIOLATED,
-                                      ConstraintStatus.CRITICAL)]
+                      if r.status == ConstraintStatus.VIOLATED]
+        critical_warnings = [r for r in results
+                             if r.status == ConstraintStatus.CRITICAL]
 
-        viable = len([r for r in results
-                      if r.status == ConstraintStatus.VIOLATED]) == 0
+        viable = len(violations) == 0
 
         # Find binding constraint (lowest margin)
         binding = min(results, key=lambda r: r.margin_remaining_pct)
@@ -168,7 +168,7 @@ class ConstraintChecker:
             6: "minerals",
             7: "thermosphere"
         }
-        for v in violations:
+        for v in violations + critical_warnings:
             subsystem = subsystem_map.get(v.law_number)
             if subsystem:
                 effects = self.cascade_engine.trace_cascade(subsystem)
@@ -178,10 +178,18 @@ class ConstraintChecker:
         cascade_effects.sort(key=lambda x: x["total_strength"], reverse=True)
 
         # Generate summary
-        if viable:
+        if viable and not critical_warnings:
             summary = (
                 f"Proposal '{name}' satisfies all planetary conservation "
                 f"constraints. Binding constraint: Law {binding.law_number} "
+                f"({binding.name}) at {binding.margin_remaining_pct:.1f}% margin."
+            )
+        elif viable:
+            critical_laws = [f"Law {c.law_number}" for c in critical_warnings]
+            summary = (
+                f"Proposal '{name}' is viable but has {len(critical_warnings)} "
+                f"CRITICAL constraint(s): {', '.join(critical_laws)}. "
+                f"Binding constraint: Law {binding.law_number} "
                 f"({binding.name}) at {binding.margin_remaining_pct:.1f}% margin."
             )
         else:
