@@ -141,6 +141,14 @@ class ConstraintChecker:
             rare_earth_kg_per_year: float
             material_requirements_kg: dict
         """
+        REQUIRED_FIELDS = ["name", "launches_per_year", "propellant_type",
+                           "orbital_mass_kg", "duration_years"]
+        missing = [f for f in REQUIRED_FIELDS if f not in proposal]
+        if missing:
+            raise ValueError(
+                f"Proposal missing required fields: {', '.join(missing)}"
+            )
+
         timestamp = datetime.utcnow().isoformat()
         name = proposal.get("name", "Unnamed Proposal")
 

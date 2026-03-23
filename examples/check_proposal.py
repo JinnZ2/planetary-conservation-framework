@@ -155,4 +155,28 @@ def show_cascade():
 def show_feedback_loops():
     """Identify all positive feedback loops in the system."""
     print("\n" + "="*70)
-    print("FEEDBACK LOOP IDENTIFICATION​​​​​​​​​​​​​​​​
+    print("FEEDBACK LOOP IDENTIFICATION")
+    print("="*70)
+
+    engine = CascadeEngine()
+    loops = engine.find_feedback_loops()
+
+    if loops:
+        for i, loop in enumerate(loops, 1):
+            chain = " → ".join(loop["path"])
+            print(f"\n  [{i}] {loop['origin']} → {chain}")
+            print(f"      Timescale: {loop['total_timescale']:.1f} yr")
+    else:
+        print("  No feedback loops detected.")
+
+    print(f"\n{'='*70}\n")
+
+
+if __name__ == "__main__":
+    # Run all examples
+    check_orbital_datacenter()
+    check_compliant_proposal()
+    show_cascade()
+    show_feedback_loops()
+    print_site_comparison()
+    run_scenario_comparison()

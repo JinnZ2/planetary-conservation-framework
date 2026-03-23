@@ -102,7 +102,7 @@ class Simulator:
     """
 
     def __init__(self, config: ScenarioConfig = None):
-        self.config = config or ScenarioConfig()
+        self.config = deepcopy(config) if config else ScenarioConfig()
         self.history: List[SystemState] = []
 
     def run(self, n_runs: int = 1, seed: int = None) -> List[List[SystemState]]:

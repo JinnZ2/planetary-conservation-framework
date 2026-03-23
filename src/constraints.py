@@ -14,6 +14,16 @@ from enum import Enum
 from datetime import datetime
 import json
 
+from .constants import (
+    HYDROGEN_ESCAPE_ANNUAL_KG,
+    BC_ANNUAL_CEILING_KG,
+    BC_PER_STARSHIP_LAUNCH_KG,
+    ALUMINA_ANNUAL_CEILING_KG,
+    ALUMINA_PER_SRB_LAUNCH_KG,
+    MESOSPHERIC_INJECTION_CEILING_KG,
+    MINERAL_DATA,
+)
+
 
 class ConstraintStatus(Enum):
     SAFE = "SAFE"
@@ -92,8 +102,8 @@ class PlanetaryWaterBudget:
     LAW_NUMBER = 1
     NAME = "Planetary Water Budget"
 
-    NATURAL_ESCAPE_KG_PER_YEAR = 9.5e7
-    MAX_ANTHROPOGENIC_ADDITION_KG = 9.5e5
+    NATURAL_ESCAPE_KG_PER_YEAR = HYDROGEN_ESCAPE_ANNUAL_KG
+    MAX_ANTHROPOGENIC_ADDITION_KG = HYDROGEN_ESCAPE_ANNUAL_KG * 0.01  # 1% of natural
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
         """
@@ -110,6 +120,8 @@ class PlanetaryWaterBudget:
 
         if prop_type == "methane_lox":
             h2o_per_launch = proposal.get("propellant_per_launch_kg", 4_600_000) * 0.39
+        elif prop_type == "kerosene_lox":
+            h2o_per_launch = proposal.get("propellant_per_launch_kg", 500_000) * 0.34
         elif prop_type == "hydrogen_lox":
             h2o_per_launch = proposal.get("propellant_per_launch_kg", 2_000_000) * 0.9
         elif prop_type == "solid":
@@ -161,13 +173,13 @@ class AtmosphericComposition:
     LAW_NUMBER = 2
     NAME = "Atmospheric Composition Integrity"
 
-    MESOSPHERIC_CEILING_KG = 5e11
-    BC_CEILING_KG = 1_000_000
-    ALUMINA_CEILING_KG = 100_000
+    MESOSPHERIC_CEILING_KG = MESOSPHERIC_INJECTION_CEILING_KG
+    BC_CEILING_KG = BC_ANNUAL_CEILING_KG
+    ALUMINA_CEILING_KG = ALUMINA_ANNUAL_CEILING_KG
 
-    BC_PER_METHANE_LAUNCH_KG = 50
+    BC_PER_METHANE_LAUNCH_KG = BC_PER_STARSHIP_LAUNCH_KG
     BC_PER_KEROSENE_LAUNCH_KG = 150
-    ALUMINA_PER_SOLID_LAUNCH_KG = 300
+    ALUMINA_PER_SOLID_LAUNCH_KG = ALUMINA_PER_SRB_LAUNCH_KG
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
         launches = proposal.get("launches_per_year", 0)
@@ -354,12 +366,8 @@ class CrustalMaterialThroughput:
     }
 
     GLOBAL_PRODUCTION = {
-        "rare_earths": 350_000_000,
-        "high_purity_copper": 22_000_000_000,
-        "lithium": 180_000_000,
-        "cobalt": 220_000_000,
-        "gallium": 500_000,
-        "indium": 900_000,
+        mineral: data["global_production_kg_per_year"]
+        for mineral, data in MINERAL_DATA.items()
     }
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
