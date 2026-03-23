@@ -95,29 +95,47 @@ class PlanetaryWaterBudget:
     NATURAL_ESCAPE_KG_PER_YEAR = 9.5e7
     MAX_ANTHROPOGENIC_ADDITION_KG = 9.5e5
 
+    # Altitude-adjusted H2O fractions: fraction of total propellant mass that
+    # becomes H2O at altitudes where UV dissociation occurs (not total
+    # stoichiometric yield, which is higher).
+    H2O_FRACTION_METHANE_LOX = 0.39   # stoichiometric ~0.49, adjusted for altitude
+    H2O_FRACTION_KEROSENE_LOX = 0.39  # stoichiometric ~0.39, similar exhaust profile
+    H2O_FRACTION_HYDROGEN_LOX = 0.9   # nearly all exhaust is H2O
+    H2O_FRACTION_SOLID = 0.15         # minority product (HCl, Al2O3 dominate)
+
+    DEFAULT_PROPELLANT_KG = {
+        "methane_lox": 4_600_000,
+        "kerosene_lox": 4_600_000,
+        "hydrogen_lox": 2_000_000,
+        "solid": 500_000,
+    }
+
     def evaluate(self, proposal: dict) -> ConstraintResult:
         """
         Evaluate a proposal against the water budget constraint.
 
         proposal must contain:
             - launches_per_year: int
-            - propellant_type: str ("methane_lox", "hydrogen_lox", "solid",
-                                    "electric", "electromagnetic")
+            - propellant_type: str ("methane_lox", "hydrogen_lox", "kerosene_lox",
+                                    "solid", "electric", "electromagnetic")
             - propellant_per_launch_kg: float (optional, has defaults)
         """
         launches = proposal.get("launches_per_year", 0)
         prop_type = proposal.get("propellant_type", "methane_lox")
 
-        if prop_type == "methane_lox":
-            h2o_per_launch = proposal.get("propellant_per_launch_kg", 4_600_000) * 0.39
-        elif prop_type == "hydrogen_lox":
-            h2o_per_launch = proposal.get("propellant_per_launch_kg", 2_000_000) * 0.9
-        elif prop_type == "solid":
-            h2o_per_launch = proposal.get("propellant_per_launch_kg", 500_000) * 0.15
-        elif prop_type in ("electric", "electromagnetic"):
+        h2o_fractions = {
+            "methane_lox": self.H2O_FRACTION_METHANE_LOX,
+            "kerosene_lox": self.H2O_FRACTION_KEROSENE_LOX,
+            "hydrogen_lox": self.H2O_FRACTION_HYDROGEN_LOX,
+            "solid": self.H2O_FRACTION_SOLID,
+        }
+
+        if prop_type in ("electric", "electromagnetic"):
             h2o_per_launch = 0
         else:
-            h2o_per_launch = proposal.get("propellant_per_launch_kg", 4_600_000) * 0.39
+            fraction = h2o_fractions.get(prop_type, self.H2O_FRACTION_METHANE_LOX)
+            default_prop = self.DEFAULT_PROPELLANT_KG.get(prop_type, 4_600_000)
+            h2o_per_launch = proposal.get("propellant_per_launch_kg", default_prop) * fraction
 
         total_h2o = launches * h2o_per_launch
         dissociation_fraction = 0.03
@@ -167,6 +185,7 @@ class AtmosphericComposition:
 
     BC_PER_METHANE_LAUNCH_KG = 50
     BC_PER_KEROSENE_LAUNCH_KG = 150
+    BC_PER_SOLID_LAUNCH_KG = 75  # solid motors produce less soot than kerosene
     ALUMINA_PER_SOLID_LAUNCH_KG = 300
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
@@ -180,8 +199,14 @@ class AtmosphericComposition:
             bc_annual = launches * self.BC_PER_KEROSENE_LAUNCH_KG
             alumina_annual = 0
         elif prop_type == "solid":
-            bc_annual = launches * self.BC_PER_KEROSENE_LAUNCH_KG * 0.5
+            bc_annual = launches * self.BC_PER_SOLID_LAUNCH_KG
             alumina_annual = launches * self.ALUMINA_PER_SOLID_LAUNCH_KG
+        elif prop_type == "hydrogen_lox":
+            bc_annual = 0  # H2/LOX produces no soot
+            alumina_annual = 0
+        elif prop_type in ("electric", "electromagnetic"):
+            bc_annual = 0
+            alumina_annual = 0
         else:
             bc_annual = 0
             alumina_annual = 0
@@ -224,9 +249,14 @@ class AngularMomentumBudget:
     LAW_NUMBER = 3
     NAME = "Angular Momentum Budget"
 
-    EARTH_I = 8.04e37
+    EARTH_I = 8.04e37  # kg·m², polar moment of inertia
     MAX_DELTA_I_FRACTION_PER_CENTURY = 1e-14
-    MAX_CUMULATIVE_ORBITAL_MASS_KG = 1e11
+    LEO_REFERENCE_RADIUS_M = 6.771e6  # Earth radius + 400 km LEO
+    # Derived: max mass = (MAX_DELTA_I_FRACTION * EARTH_I) / r²
+    MAX_CUMULATIVE_ORBITAL_MASS_KG = (
+        MAX_DELTA_I_FRACTION_PER_CENTURY * EARTH_I
+        / (LEO_REFERENCE_RADIUS_M ** 2)
+    )  # ~1.75e10 kg
     DEORBIT_REQUIREMENT_YEARS = 25
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
@@ -433,20 +463,29 @@ class ThermosphericBalance:
     CONTRACTION_RATE_KM_PER_DECADE = -2.0
     SOOT_HEATING_COEFFICIENT = 1e-6
     REVERSAL_THRESHOLD_W_PER_M2 = 0.005
+    BC_RESIDENCE_TIME_YEARS = 4.0  # mesospheric BC atmospheric lifetime
+
+    BC_PER_METHANE_LAUNCH_KG = 50
+    BC_PER_KEROSENE_LAUNCH_KG = 150
+    BC_PER_SOLID_LAUNCH_KG = 75
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
         launches = proposal.get("launches_per_year", 0)
         prop_type = proposal.get("propellant_type", "methane_lox")
 
         if prop_type == "methane_lox":
-            bc_per_launch = 50
+            bc_per_launch = self.BC_PER_METHANE_LAUNCH_KG
         elif prop_type == "kerosene_lox":
-            bc_per_launch = 150
+            bc_per_launch = self.BC_PER_KEROSENE_LAUNCH_KG
+        elif prop_type == "solid":
+            bc_per_launch = self.BC_PER_SOLID_LAUNCH_KG
         else:
             bc_per_launch = 0
 
         bc_annual = launches * bc_per_launch
-        heating = bc_annual * self.SOOT_HEATING_COEFFICIENT
+        # Steady-state accumulated BC = annual emission × residence time
+        bc_steady_state = bc_annual * self.BC_RESIDENCE_TIME_YEARS
+        heating = bc_steady_state * self.SOOT_HEATING_COEFFICIENT
 
         margin = self.REVERSAL_THRESHOLD_W_PER_M2 - heating
         margin_pct = ((margin / self.REVERSAL_THRESHOLD_W_PER_M2) * 100
