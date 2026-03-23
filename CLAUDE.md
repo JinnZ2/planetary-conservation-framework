@@ -43,7 +43,7 @@ Possible-addons.md          # Proposed future additions and extensions
 
 ## Commands
 
-### Run all tests (27 tests)
+### Run all tests (32 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -134,6 +134,7 @@ Optional fields:
 **In `src/cascade.py`:**
 - `CascadeLink` — source, target, mechanism, strength (0-1), timescale_years, direction
 - `CASCADE_LINKS` — 14 pre-defined coupling paths
+- `BC_RESIDENCE_TIME_YEARS` — default 4.0 years (used for steady-state heating)
 - `CascadeEngine` — `trace_cascade()`, `find_feedback_loops()`, `print_cascade()`
 
 **In `src/constants.py`:**
@@ -197,7 +198,7 @@ Status is derived from margin percentage in `_status_from_margin()`:
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 27 tests across 10 test classes
+- 32 tests across 10 test classes
 - Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker
 - No CI/CD pipeline configured
 - No linting or formatting tools configured
