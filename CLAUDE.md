@@ -19,7 +19,8 @@ src/                        # Core framework (importable package)
   materials.py              # MaterialLedger, MaterialEntry — gram-level tracking
   locations.py              # LaunchSiteProfile, 4 site profiles (Boca Chica, KSC, Vandenberg, Kourou)
   constants.py              # MeasuredValue, MINERAL_DATA, DataCenterModule, launch parameters
-  planetary_constants.py    # Extended planetary parameters
+  planetary_constants.py    # Extended planetary parameters — regionalized orbital/atmospheric/mineral
+                            #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
   test_constraints.py       # 27 unit tests (unittest) — no __init__.py
@@ -34,6 +35,10 @@ examples/
 atomic_accounting.py        # AtomicAccountant, Element registry, depletion analysis (root)
 governance.py               # GovernanceChecker, DecisionBody (root; runs example at import)
 power_dynamics.py           # PowerOrientation, AI directives, check_governance_risk() (root)
+
+CONSTRAINT_ANALYSIS.md      # Detailed constraint analysis documentation
+POWER_DYNAMICS.md           # Power dynamics and governance analysis
+Possible-addons.md          # Proposed future additions and extensions
 ```
 
 ## Commands
@@ -128,7 +133,7 @@ Optional fields:
 
 **In `src/cascade.py`:**
 - `CascadeLink` — source, target, mechanism, strength (0-1), timescale_years, direction
-- `CASCADE_LINKS` — 13 pre-defined coupling paths
+- `CASCADE_LINKS` — 14 pre-defined coupling paths
 - `CascadeEngine` — `trace_cascade()`, `find_feedback_loops()`, `print_cascade()`
 
 **In `src/constants.py`:**
@@ -139,6 +144,18 @@ Optional fields:
 **In `src/materials.py`:**
 - `MaterialEntry` — material, mass_kg, origin, destination, energy/CO2 costs
 - `MaterialLedger` — `record()`, `check_against_ceiling()`, `energy_audit()`, `export_json()`, `export_csv()`
+
+**In `src/planetary_constants.py`:**
+- `SCHEMA_VERSION` — "1.0.0"
+- `ORBITAL` — regionalized orbital bands (leo_low, leo_high, meo, gto_geo) with thresholds, margins, uncertainty
+- `ATMOSPHERIC` — sub-constraints for black carbon, alumina, mesospheric water vapor
+- `HYDROGEN_ESCAPE` — policy-choice caps with directional risk framing
+- `GEODYNAMO` — directional risk indicator (not a hard limit)
+- `MINERALS` — 10 minerals (rare_earth_aggregate, copper, cobalt, indium, gallium, tantalum, lithium, silicon_refined, aluminum) with production/threshold data
+- `LAUNCH` — max realistic cadence, historical data, pad constraints
+- `ENERGY` — thermodynamic minimums, delta-v requirements, meteoritic influx
+- `compute_margins()` — calculates current margins across all constraint categories
+- `print_summary()` — formatted output of all planetary constants
 
 ### Margin Thresholds
 
@@ -180,7 +197,7 @@ Status is derived from margin percentage in `_status_from_margin()`:
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 27 tests across 9 test classes
+- 27 tests across 10 test classes
 - Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker
 - No CI/CD pipeline configured
 - No linting or formatting tools configured
