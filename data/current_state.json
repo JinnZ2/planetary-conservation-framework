@@ -1,7 +1,7 @@
 {
   "metadata": {
     "framework_version": "0.1.0",
-    "last_updated": "2026-02-27",
+    "last_updated": "2026-04-10",
     "license": "CC BY-SA 4.0",
     "notes": "Current state of all constraint parameters. Update regularly."
   },
@@ -58,5 +58,29 @@
     "margin_pct": 94.7,
     "source": "Catling & Zahnle 2009",
     "as_of": "2024-01"
+  },
+  "earth_energy_imbalance": {
+    "eei_w_m2_2020_2025_mean": 1.30,
+    "eei_w_m2_2005_2019_mean": 0.90,
+    "eei_w_m2_1960_2000_mean": 0.40,
+    "eei_uncertainty_w_m2": 0.20,
+    "ohc_increase_zj_per_yr_2005_to_2025": 11.0,
+    "eei_excess_vs_human_energy_ratio": 18,
+    "partition_fraction": {
+      "ocean": 0.91,
+      "land": 0.05,
+      "ice": 0.03,
+      "atmosphere": 0.01
+    },
+    "co2_ppm": 423.9,
+    "co2_pct_of_preindustrial": 152,
+    "temperature_anomaly_c_2025": 1.43,
+    "temperature_baseline_period": "1850-1900",
+    "hottest_11yr_window": "2015-2025",
+    "sea_level_rise_mm_per_yr_2012_2025": 4.75,
+    "record_year": 2025,
+    "notes": "WMO 2025: EEI at 65-year record high. Rate of ocean heat uptake more than doubled from 1960-2005 to 2005-2025.",
+    "source": "WMO State of the Global Climate 2025 (March 2026); von Schuckmann et al. 2023; Loeb et al. 2021",
+    "as_of": "2026-03"
   }
 }

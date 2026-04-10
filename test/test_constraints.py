@@ -18,6 +18,16 @@ from src.constraints import (
 from src.cascade import CascadeEngine
 from src.materials import MaterialLedger, MaterialEntry
 from src.checker import ConstraintChecker
+from src.planetary_constants import (
+    EARTH_ENERGY_IMBALANCE,
+    eei_to_total_power_w,
+    eei_to_annual_heat_zj,
+    eei_from_ohc_trend,
+    partition_excess_energy,
+    accumulated_heat_zj,
+    forcing_as_eei_fraction,
+    compute_margins,
+)
 
 
 class TestWaterBudget(unittest.TestCase):
@@ -400,6 +410,138 @@ class TestConstraintChecker(unittest.TestCase):
 
 # Need json import for TestCascadeEngine and TestConstraintChecker
 import json
+
+
+class TestEarthEnergyImbalance(unittest.TestCase):
+    """
+    Tests for the WMO State of the Global Climate 2025 energy-imbalance
+    equations and constants.
+    """
+
+    def test_partition_fractions_sum_to_one(self):
+        total = sum(EARTH_ENERGY_IMBALANCE["partition_fraction"].values())
+        self.assertAlmostEqual(total, 1.0, places=6)
+
+    def test_eei_to_total_power_w(self):
+        # 1 W/m² across Earth's surface = ~5.10e14 W
+        power = eei_to_total_power_w(1.0)
+        self.assertAlmostEqual(power, 5.10e14, places=0)
+
+    def test_eei_to_annual_heat_zj_scales_linearly(self):
+        one = eei_to_annual_heat_zj(1.0)
+        two = eei_to_annual_heat_zj(2.0)
+        self.assertAlmostEqual(two, 2.0 * one, places=6)
+
+    def test_eei_annual_heat_matches_expected_magnitude(self):
+        # 1 W/m² × 5.10e14 m² × 3.156e7 s ≈ 1.61e22 J ≈ 16.1 ZJ/yr
+        heat_zj = eei_to_annual_heat_zj(1.0)
+        self.assertAlmostEqual(heat_zj, 16.1, delta=0.2)
+
+    def test_eei_from_ohc_trend_roundtrip(self):
+        # Forward: EEI → annual heat → ocean share → implied EEI
+        eei_in = 1.30
+        total_heat_zj = eei_to_annual_heat_zj(eei_in)
+        ocean_heat_zj = total_heat_zj * 0.91
+        eei_out = eei_from_ohc_trend(ocean_heat_zj,
+                                     ocean_partition_fraction=0.91)
+        self.assertAlmostEqual(eei_in, eei_out, places=6)
+
+    def test_wmo_11_zj_per_yr_headline(self):
+        # WMO 2025: ~11 ZJ/yr additional uptake between 2005 and 2025.
+        # Dividing by the ocean share should imply an EEI increment
+        # consistent with the published ~0.5-0.9 W/m² range.
+        implied_eei = eei_from_ohc_trend(11.0)
+        self.assertGreater(implied_eei, 0.5)
+        self.assertLess(implied_eei, 0.9)
+
+    def test_partition_excess_energy_preserves_total(self):
+        eei = 1.30
+        allocated = partition_excess_energy(eei)
+        self.assertAlmostEqual(sum(allocated.values()), eei, places=6)
+        # Ocean must dominate per WMO 2025.
+        self.assertGreater(allocated["ocean"],
+                           allocated["land"]
+                           + allocated["ice"]
+                           + allocated["atmosphere"])
+
+    def test_accumulated_heat_zj_linear(self):
+        eei = 1.30
+        one_year = accumulated_heat_zj(eei, 1)
+        ten_years = accumulated_heat_zj(eei, 10)
+        self.assertAlmostEqual(ten_years, 10 * one_year, places=6)
+
+    def test_forcing_as_eei_fraction(self):
+        # A 0.013 W/m² launch forcing against 1.30 W/m² EEI = 1%
+        frac = forcing_as_eei_fraction(0.013, baseline_eei_w_m2=1.30)
+        self.assertAlmostEqual(frac, 0.01, places=6)
+
+    def test_forcing_fraction_defaults_to_wmo_mean(self):
+        # Without explicit baseline, should use 2020-2025 WMO mean (1.30).
+        frac_default = forcing_as_eei_fraction(1.30)
+        self.assertAlmostEqual(frac_default, 1.0, places=6)
+
+    def test_co2_and_temperature_sanity(self):
+        self.assertGreater(EARTH_ENERGY_IMBALANCE["co2_ppm"], 420)
+        self.assertAlmostEqual(
+            EARTH_ENERGY_IMBALANCE["temperature_anomaly_c_2025"], 1.43, places=2
+        )
+
+    def test_compute_margins_includes_eei(self):
+        margins = compute_margins()
+        self.assertIn("earth_energy_imbalance", margins)
+        eei_m = margins["earth_energy_imbalance"]
+        self.assertIn("current_eei_w_m2", eei_m)
+        self.assertIn("partition_w_m2", eei_m)
+        self.assertIn("annual_heat_zj", eei_m)
+        # Current EEI should exceed the historical baseline.
+        self.assertGreater(eei_m["current_eei_w_m2"],
+                           eei_m["historical_eei_w_m2"])
+
+
+class TestThermosphericBalanceEEIContext(unittest.TestCase):
+    """ThermosphericBalance should reference the WMO 2025 EEI baseline."""
+
+    def test_background_eei_constant_present(self):
+        self.assertTrue(hasattr(ThermosphericBalance, "BACKGROUND_EEI_W_PER_M2"))
+        self.assertAlmostEqual(
+            ThermosphericBalance.BACKGROUND_EEI_W_PER_M2, 1.30, places=2
+        )
+
+    def test_mechanism_reports_eei_context(self):
+        c = ThermosphericBalance()
+        result = c.evaluate({
+            "launches_per_year": 100,
+            "propellant_type": "methane_lox"
+        })
+        self.assertIn("WMO", result.mechanism)
+        self.assertIn("EEI", result.mechanism)
+
+    def test_wmo_source_cited(self):
+        c = ThermosphericBalance()
+        result = c.evaluate({
+            "launches_per_year": 10,
+            "propellant_type": "methane_lox"
+        })
+        self.assertTrue(
+            any("WMO" in src for src in result.data_sources),
+            f"Expected WMO in data_sources, got {result.data_sources}"
+        )
+
+
+class TestCascadeEngineClimateLink(unittest.TestCase):
+    """The climate → debris coupling (WMO EEI context) should be present."""
+
+    def test_climate_to_debris_link_exists(self):
+        engine = CascadeEngine()
+        paths = engine.trace_cascade("climate", max_depth=4)
+        targets = {step["to"] for p in paths for step in p["path"]}
+        self.assertIn("debris", targets)
+
+    def test_climate_to_thermosphere_link_exists(self):
+        engine = CascadeEngine()
+        paths = engine.trace_cascade("climate", max_depth=4)
+        targets = {step["to"] for p in paths for step in p["path"]}
+        self.assertIn("thermosphere", targets)
 
 
 if __name__ == "__main__":

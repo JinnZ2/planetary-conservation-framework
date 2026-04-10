@@ -456,6 +456,16 @@ class ThermosphericBalance:
     Soot heating must not reverse thermospheric contraction trend.
     Positive feedback: heating → expansion → drag → shorter lifetimes →
     more replacement launches → more heating.
+
+    Contextual coupling to the planetary energy budget:
+    The same greenhouse-gas forcing that drives Earth's top-of-atmosphere
+    energy imbalance (WMO State of the Global Climate 2025: ~1.3 W/m²
+    mean for 2020-2025, a 65-year record high) radiatively *cools*
+    and contracts the thermosphere. Launch-induced black-carbon heating
+    operates in the opposite direction, but sits on top of this
+    already-accelerating baseline. The launch-attributable forcing is
+    therefore reported both against the local thermospheric reversal
+    threshold AND as a fraction of the WMO-observed planetary EEI.
     """
     LAW_NUMBER = 7
     NAME = "Thermospheric Energy Balance"
@@ -464,6 +474,11 @@ class ThermosphericBalance:
     SOOT_HEATING_COEFFICIENT = 1e-6
     REVERSAL_THRESHOLD_W_PER_M2 = 0.005
     BC_RESIDENCE_TIME_YEARS = 4.0  # mesospheric BC atmospheric lifetime
+
+    # Background planetary EEI for contextual framing.
+    # Source: WMO State of the Global Climate 2025 (March 2026),
+    # 2020-2025 mean, uncertainty ±0.2 W/m².
+    BACKGROUND_EEI_W_PER_M2 = 1.30
 
     BC_PER_METHANE_LAUNCH_KG = 50
     BC_PER_KEROSENE_LAUNCH_KG = 150
@@ -499,6 +514,12 @@ class ThermosphericBalance:
             else:
                 feedback_factor = float('inf')
 
+        # Launch-induced BC forcing as a fraction of the WMO-observed
+        # planetary energy imbalance. A value of 0.01 means the steady-
+        # state launch forcing is 1% of the current global EEI.
+        eei_fraction = (heating / self.BACKGROUND_EEI_W_PER_M2
+                        if self.BACKGROUND_EEI_W_PER_M2 > 0 else 0.0)
+
         return ConstraintResult(
             law_number=self.LAW_NUMBER,
             name=self.NAME,
@@ -510,11 +531,18 @@ class ThermosphericBalance:
             unit="W/m² thermospheric heating",
             mechanism=f"BC deposition: {bc_annual} kg/yr → {heating:.6f} W/m² heating. "
                       f"Feedback amplification factor: {feedback_factor:.2f}x. "
+                      f"Launch forcing vs WMO 2025 planetary EEI "
+                      f"({self.BACKGROUND_EEI_W_PER_M2:.2f} W/m²): "
+                      f"{eei_fraction*100:.4f}%. "
                       f"Positive feedback loop: heating → drag → replacement → more heating.",
             cascade_triggers=["orbital lifetime reduction", "replacement cascade",
-                              "debris acceleration", "launch cadence pressure"],
-            data_sources=["Ross & Sheaffer 2014", "Emmert 2015"],
-            notes="Fastest feedback loop — operates on annual timescales"
+                              "debris acceleration", "launch cadence pressure",
+                              "additive to WMO-observed planetary EEI"],
+            data_sources=["Ross & Sheaffer 2014", "Emmert 2015",
+                          "WMO State of the Global Climate 2025"],
+            notes="Fastest feedback loop — operates on annual timescales. "
+                  f"WMO 2025: global EEI at record-high {self.BACKGROUND_EEI_W_PER_M2} W/m² "
+                  "(65-year peak); launch forcing is additive."
         )
 
 
