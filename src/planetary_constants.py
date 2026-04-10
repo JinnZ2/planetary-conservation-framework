@@ -382,6 +382,209 @@ ENERGY = {
 
 
 # =============================================================================
+# EARTH ENERGY IMBALANCE (EEI) — WMO State of the Global Climate 2025
+# =============================================================================
+#
+# EEI is the net difference between absorbed solar radiation and outgoing
+# longwave radiation at the top of the atmosphere. It is the single scalar
+# that integrates all greenhouse-gas forcing, aerosol effects, and surface
+# albedo change. Every joule of "excess heat" accumulating in the climate
+# system — oceans, land, ice, atmosphere — derives from this net inflow.
+#
+# WMO 2025 headline findings (report released 19 March 2026):
+#   • EEI has reached its highest level since the observational record
+#     began in 1960. The rate of ocean heat uptake more than DOUBLED
+#     from 1960-2005 to 2005-2025.
+#   • Heat accumulation rose by ~11 ZJ/yr between 2005 and 2025 —
+#     approximately 18x total annual human primary energy use.
+#   • ~91% of excess energy is absorbed by the oceans, ~5% by land,
+#     ~3% by ice sheets/glaciers/sea ice, ~1% heats the atmosphere.
+#   • CO2 reached 423.9 ± 0.2 ppm (152% of pre-industrial).
+#   • 2015-2025 were the hottest 11 years on record; 2025 was at
+#     ~1.43 °C above the 1850-1900 baseline.
+#   • Sea level rise accelerated from 2.65 mm/yr (1993-2011) to
+#     4.75 mm/yr (2012-2025).
+#
+# Why this matters to the Planetary Conservation Framework:
+#   1. EEI is the calibrated planetary-scale denominator against which any
+#      additional anthropogenic forcing — including launch-plume black
+#      carbon, stratospheric alumina, space-DC waste-heat rejection, and
+#      CO2 from propellant manufacturing — must be measured.
+#   2. The same greenhouse-gas forcing that drives positive EEI cools
+#      and contracts the upper atmosphere (CO2 radiates efficiently to
+#      space from the thermosphere). Contraction reduces drag on LEO
+#      debris — coupling WMO's headline indicator to Law 5 (Orbital
+#      Commons) and Law 7 (Thermospheric Balance).
+#   3. Ocean heat content (OHC) is the most stable EEI proxy because
+#      the ocean stores >90% of the accumulating heat. Inverting an
+#      OHC trend yields an implied EEI — see eei_from_ohc_trend().
+#
+# Sources:
+#   - WMO State of the Global Climate 2025 (WMO, March 2026)
+#   - von Schuckmann et al. 2023, Earth Syst. Sci. Data — "Heat stored
+#     in the Earth system 1960-2020"
+#   - Loeb et al. 2021, GRL — CERES TOA EEI observations
+#   - IPCC AR6 WG1 Chapter 7 (energy budget framework)
+
+EARTH_ENERGY_IMBALANCE = {
+    # ----- Core EEI values (W/m² of Earth's surface) -----
+    # Period-mean EEI estimates. The 2005-2019 value is anchored to
+    # Loeb 2021 / von Schuckmann 2023; the 2020-2025 value reflects
+    # the WMO 2025 "record high" headline. Uncertainty is ±1σ and
+    # combines observational (CERES) and OHC-inversion spread.
+    "eei_w_m2_1960_2000_mean": 0.40,
+    "eei_w_m2_2005_2019_mean": 0.90,
+    "eei_w_m2_2020_2025_mean": 1.30,      # WMO 2025 record-high period
+    "eei_uncertainty_w_m2": 0.20,
+    "record_year": 2025,
+    "observation_record_start_year": 1960,
+
+    # ----- Rate of acceleration (WMO 2025 headline) -----
+    # Additional heat uptake rate over the 2005-2025 window.
+    "ohc_increase_zj_per_yr_2005_to_2025": 11.0,
+    "ohc_doubling_statement": (
+        "Rate of ocean heat uptake more than doubled from 1960-2005 "
+        "to 2005-2025."
+    ),
+    "human_primary_energy_use_zj_per_yr": 0.6,   # ~600 EJ/yr (2024)
+    "eei_excess_vs_human_energy_ratio": 18,      # WMO 2025 framing
+
+    # ----- Partition of excess energy (WMO 2025) -----
+    # Fractions MUST sum to 1.0 — verified by compute_margins().
+    "partition_fraction": {
+        "ocean": 0.91,
+        "land": 0.05,
+        "ice": 0.03,          # ice sheets + glaciers + sea ice
+        "atmosphere": 0.01,
+    },
+
+    # ----- Physical constants for EEI equations -----
+    "earth_surface_area_m2": 5.10e14,
+    "seconds_per_year": 3.156e7,
+    "joules_per_zj": 1e21,
+
+    # ----- Companion climate indicators (WMO 2025) -----
+    "co2_ppm": 423.9,
+    "co2_ppm_uncertainty": 0.2,
+    "co2_pct_of_preindustrial": 152,
+    "temperature_anomaly_c_2025": 1.43,          # vs 1850-1900
+    "temperature_baseline_period": "1850-1900",
+    "hottest_11yr_window": "2015-2025",
+    "sea_level_rise_mm_per_yr_1993_2011": 2.65,
+    "sea_level_rise_mm_per_yr_2012_2025": 4.75,
+
+    "indicator_type": "directional_risk_and_forcing_denominator",
+    "notes": (
+        "EEI is the most fundamental metric of planetary energy health. "
+        "Not a hard engineering limit but the denominator against which all "
+        "anthropogenic forcings — including space operations — must be "
+        "measured. A launch program whose steady-state forcing is a "
+        "non-trivial fraction of current EEI is not 'small' — it is "
+        "additive to an already-accelerating imbalance."
+    ),
+    "sources": [
+        "WMO State of the Global Climate 2025 (March 2026)",
+        "von Schuckmann et al. 2023, Earth Syst. Sci. Data",
+        "Loeb et al. 2021, Geophys. Res. Lett.",
+        "IPCC AR6 WG1 Ch. 7",
+    ],
+}
+
+
+# -----------------------------------------------------------------------------
+# EEI equations
+# -----------------------------------------------------------------------------
+#
+# Canonical form (IPCC AR6 WG1 Ch. 7, von Schuckmann 2023):
+#
+#   EEI · A_Earth · Δt  =  ΔE_total  =  Σ_i ΔE_i
+#
+# where A_Earth ≈ 5.10e14 m², Δt is in seconds, and the climate-compartment
+# energy gains ΔE_i (ocean, land, ice, atmosphere) sum to total heat uptake.
+#
+# The compartment partition f_i is observed (WMO 2025): f_ocean ≈ 0.91,
+# f_land ≈ 0.05, f_ice ≈ 0.03, f_atmosphere ≈ 0.01. Inverting for EEI from
+# the largest compartment (ocean heat content) yields the most robust
+# observational estimate:
+#
+#   EEI  ≈  (dOHC/dt) / (f_ocean · A_Earth)
+
+
+def eei_to_total_power_w(eei_w_m2: float) -> float:
+    """Convert EEI (W/m²) to total absorbed power over Earth's surface (W)."""
+    return eei_w_m2 * EARTH_ENERGY_IMBALANCE["earth_surface_area_m2"]
+
+
+def eei_to_annual_heat_zj(eei_w_m2: float) -> float:
+    """
+    Annual heat accumulation (ZJ/yr) implied by a steady EEI (W/m²).
+
+        ΔE/Δt [ZJ/yr]  =  EEI · A_Earth · seconds_per_year / 1e21
+    """
+    joules_per_year = (
+        eei_to_total_power_w(eei_w_m2)
+        * EARTH_ENERGY_IMBALANCE["seconds_per_year"]
+    )
+    return joules_per_year / EARTH_ENERGY_IMBALANCE["joules_per_zj"]
+
+
+def eei_from_ohc_trend(ohc_change_zj_per_yr: float,
+                       ocean_partition_fraction: float = 0.91) -> float:
+    """
+    Invert an ocean heat content trend (ZJ/yr) to an implied global EEI (W/m²).
+
+        EEI  =  (dOHC/dt) / (f_ocean · A_Earth · seconds_per_year)
+
+    Defaults to the WMO 2025 ocean partition fraction.
+    """
+    joules_per_year = (
+        ohc_change_zj_per_yr * EARTH_ENERGY_IMBALANCE["joules_per_zj"]
+    )
+    power_w = joules_per_year / EARTH_ENERGY_IMBALANCE["seconds_per_year"]
+    return power_w / (
+        ocean_partition_fraction
+        * EARTH_ENERGY_IMBALANCE["earth_surface_area_m2"]
+    )
+
+
+def partition_excess_energy(eei_w_m2: float) -> dict:
+    """
+    Distribute an EEI value across climate compartments per WMO 2025
+    fractions. Returns a dict of W/m² allocated to ocean, land, ice,
+    and atmosphere.
+    """
+    return {
+        compartment: eei_w_m2 * fraction
+        for compartment, fraction
+        in EARTH_ENERGY_IMBALANCE["partition_fraction"].items()
+    }
+
+
+def accumulated_heat_zj(eei_w_m2: float, years: float) -> float:
+    """
+    Integrate a steady EEI over N years. Returns total accumulated
+    heat in zettajoules. Linear by construction — does not model
+    feedback amplification.
+    """
+    return eei_to_annual_heat_zj(eei_w_m2) * years
+
+
+def forcing_as_eei_fraction(added_forcing_w_m2: float,
+                            baseline_eei_w_m2: float = None) -> float:
+    """
+    Express an additional anthropogenic radiative forcing (e.g., launch
+    black-carbon steady-state heating from Law 7) as a fraction of the
+    current EEI baseline. A result of 0.01 means the added forcing is
+    1% of the current planetary energy imbalance.
+    """
+    if baseline_eei_w_m2 is None:
+        baseline_eei_w_m2 = EARTH_ENERGY_IMBALANCE["eei_w_m2_2020_2025_mean"]
+    if baseline_eei_w_m2 <= 0:
+        return float("inf")
+    return added_forcing_w_m2 / baseline_eei_w_m2
+
+
+# =============================================================================
 # PRECOMPUTED MARGINS FOR CONSTRAINT CHECKER
 # =============================================================================
 #
@@ -399,6 +602,7 @@ def compute_margins() -> dict:
         "atmospheric": {},
         "minerals": {},
         "hydrogen_escape": {},
+        "earth_energy_imbalance": {},
     }
 
     # Orbital margins by band
@@ -443,6 +647,25 @@ def compute_margins() -> dict:
         "cap_basis": HYDROGEN_ESCAPE["cap_basis"],
     }
 
+    # Earth energy imbalance — directional indicator, not a bounded margin
+    eei = EARTH_ENERGY_IMBALANCE
+    partition_sum = sum(eei["partition_fraction"].values())
+    assert abs(partition_sum - 1.0) < 1e-6, (
+        f"EEI partition fractions must sum to 1.0, got {partition_sum}"
+    )
+    margins["earth_energy_imbalance"] = {
+        "current_eei_w_m2": eei["eei_w_m2_2020_2025_mean"],
+        "historical_eei_w_m2": eei["eei_w_m2_1960_2000_mean"],
+        "delta_w_m2": (
+            eei["eei_w_m2_2020_2025_mean"] - eei["eei_w_m2_1960_2000_mean"]
+        ),
+        "annual_heat_zj": eei_to_annual_heat_zj(eei["eei_w_m2_2020_2025_mean"]),
+        "partition_w_m2": partition_excess_energy(eei["eei_w_m2_2020_2025_mean"]),
+        "uncertainty_w_m2": eei["eei_uncertainty_w_m2"],
+        "record_year": eei["record_year"],
+        "indicator_type": eei["indicator_type"],
+    }
+
     return margins
 
 
@@ -480,6 +703,21 @@ def print_summary():
     he = margins["hydrogen_escape"]
     print(f"  Margin: {he['margin_kg_yr']:,.0f} kg/yr ({he['margin_fraction']*100:.1f}% of cap)")
     print(f"  Basis: {he['cap_basis'][:70]}...")
+
+    print("\nEARTH ENERGY IMBALANCE (WMO State of the Global Climate 2025):")
+    eei_m = margins["earth_energy_imbalance"]
+    print(f"  Current EEI: {eei_m['current_eei_w_m2']:.2f} ± "
+          f"{eei_m['uncertainty_w_m2']:.2f} W/m²  [record-high since "
+          f"{EARTH_ENERGY_IMBALANCE['observation_record_start_year']}]")
+    print(f"  Historical baseline (1960-2000): {eei_m['historical_eei_w_m2']:.2f} W/m²")
+    print(f"  Δ vs baseline: +{eei_m['delta_w_m2']:.2f} W/m²")
+    print(f"  Annual heat uptake: {eei_m['annual_heat_zj']:.1f} ZJ/yr "
+          f"(≈{eei_m['annual_heat_zj'] / EARTH_ENERGY_IMBALANCE['human_primary_energy_use_zj_per_yr']:.0f}x "
+          f"human primary energy use)")
+    print(f"  Partition (W/m²):  ocean={eei_m['partition_w_m2']['ocean']:.3f}  "
+          f"land={eei_m['partition_w_m2']['land']:.3f}  "
+          f"ice={eei_m['partition_w_m2']['ice']:.3f}  "
+          f"atm={eei_m['partition_w_m2']['atmosphere']:.3f}")
 
     print("\n" + "=" * 70)
 

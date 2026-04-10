@@ -123,6 +123,35 @@ CASCADE_LINKS = [
         timescale_years=5.0,
         direction="amplifying"
     ),
+    # Climate (greenhouse forcing / WMO 2025 EEI) → thermospheric contraction
+    # CO2 radiatively cools the upper atmosphere even as it warms the
+    # troposphere. The same forcing that drives Earth's record-high energy
+    # imbalance (WMO State of the Global Climate 2025) shrinks the
+    # thermosphere.
+    CascadeLink(
+        source="climate",
+        target="thermosphere",
+        mechanism="Greenhouse forcing (WMO 2025 EEI ≈1.3 W/m²) → CO2 "
+                  "cools/contracts thermosphere → reduced density at LEO "
+                  "altitudes",
+        strength=0.5,
+        timescale_years=10.0,
+        direction="amplifying"
+    ),
+    # Climate-driven thermospheric contraction → debris lifetime extension
+    # Lower density at a given altitude means less drag means debris
+    # persists longer. This couples the WMO planetary energy-imbalance
+    # indicator directly to Law 5 (Orbital Commons).
+    CascadeLink(
+        source="climate",
+        target="debris",
+        mechanism="Thermospheric contraction from CO2 cooling → reduced "
+                  "atmospheric drag → longer debris lifetimes → higher "
+                  "sustained debris density",
+        strength=0.5,
+        timescale_years=10.0,
+        direction="amplifying"
+    ),
     # Launch site disruption → schedule compression → safety erosion
     CascadeLink(
         source="launch_sites",
