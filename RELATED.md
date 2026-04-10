@@ -85,7 +85,52 @@ These are improvements worth porting back upstream the next time the
 canonical version is edited; the sync direction is `planetary-conservation-framework → earth-systems-physics`
 for this file.
 
-## Files specific to this repo
+## Cloned from earth-systems-physics
+
+These two files were cloned from `earth-systems-physics` as a matched
+pair. They are also kept in sync going forward, with one known naming
+asymmetry:
+
+| File | Role |
+|---|---|
+| `constraint_accountability_chain.py` | Schema / meta-model. Pure dict templates (`DECISION_NODE`, `ACCOUNTABILITY_CHAIN`) documenting the "DNA-like ancestry of decisions where comfort was chosen over direct sensing." No executable code, no imports. |
+| `constraint_accountability_engine.py` | Working engine. `DecisionNode` + `AccountabilityChain` classes implementing the schema — comfort propagation, override-failure detection, reversion-cost calculation, cascade-risk sigmoid, institutional-blindness phenotype, epigenetic event modifiers. Pure stdlib (`hashlib`, `time`, `math`). Ships with a manufacturing-floor safety demo under `if __name__ == "__main__":`. |
+
+### Why these are here
+
+They are the decision-level analog of this repo's sensor-level
+`buffer_sensor_corruption.py`. Both files share the same core axis —
+`direct_sense` vs `comfort_protect` — and the same vocabulary for how
+ground signal gets distorted (`attenuation`, `delay`, `reframe`,
+`delegate_down`, `normalize`, `silence`). `buffer_sensor_corruption`
+models the phenomenon at individual sensors; these two files model it at
+the governance / decision-chain level, tracing a specific decision's
+ancestry back to the originating comfort choice.
+
+They sit naturally next to `governance.py` and `power_dynamics.py`,
+adding an analytical dimension those files don't cover: genealogical
+propagation of a specific decision through layers, and the non-linear
+`cascade_risk` + `time_to_failure` phenotype that drops out of the
+accumulated signal distortion.
+
+### Filename asymmetry vs upstream
+
+The canonical file in `earth-systems-physics` is named
+`constraint_availability_enginr.py` — the filename has two separate
+errors (`availability` should be `accountability`, `enginr` should be
+`engine`). However, line 1 of the file itself is the comment
+`# constraint_accountability_engine.py`, which is the internally-correct
+name. When the file was cloned here, the filename was corrected to match
+its own self-naming, which is why this repo uses
+`constraint_accountability_engine.py`.
+
+Upstream sync strategy: when next touching the file over there, rename
+`constraint_availability_enginr.py` → `constraint_accountability_engine.py`
+to match this repo and the file's own header comment. Direction for this
+sync asymmetry: `planetary-conservation-framework → earth-systems-physics`
+(filename only; contents are identical).
+
+## Files specific to this repo (no earth-systems-physics counterpart)
 
 These exist here but not in `earth-systems-physics`:
 
@@ -105,23 +150,27 @@ These exist here but not in `earth-systems-physics`:
 - `examples/check_proposal.py`
 - `tools/fix_paste_corruption.py` — maintenance tool
 
-## Files specific to earth-systems-physics
+## Files specific to earth-systems-physics (not cloned here)
 
-These exist in the parent framework but not here:
+These exist in the parent framework but not here, and are not planned
+for cloning either because they would pull in numpy / the layer framework
+or because they lie outside this repo's scope:
 
-- **Physics layer modules:** `layer_0_electromagnetics`,
+- **Physics layer modules (8 files):** `layer_0_electromagnetics`,
   `layer_0b_magnomechanical`, `layer_1_magnetosphere`, `layer_2_ionosphere`,
   `layer_3_atmosphere`, `layer_4_hydrosphere`, `layer_5_lithosphere`,
-  `layer_6_biosphere`
-- **Framework engines:** `cascade_engine.py` (this repo has its own
-  `src/cascade.py` — logically similar but separately maintained),
-  `constraint_accountability_chain.py`,
-  `constraint_availability_enginr.py` (sic — typo in filename over there)
+  `layer_6_biosphere` — all numpy-dependent physics
+- **Physical cascade engine:** `cascade_engine.py` — 1078 lines, imports
+  numpy and all seven layer modules. This repo has its own `src/cascade.py`
+  which is the space-operations coupling engine (thermosphere → debris →
+  launch cadence). The two cascades are conceptually parallel but model
+  different physical layers and are maintained separately.
 - **Magnomechanical modules (11 files):** `banded_crystal_computer`,
   `cavity_optomagnonics`, `cold_climate_crystal`, `confined_magnon_polaron`,
   `crystal_device_gradient`, `device_scaling`, `earth_magnomechanical`,
   `electrostatic_transducer`, `magnon_polaron_hybridization`,
-  `magnonic_sublayer`, `multi_channel_coupling`
+  `magnonic_sublayer`, `multi_channel_coupling` — hardware/device physics,
+  out of scope for this framework
 - **Other:** `energy_audit.py`, `chattel_slavery_triple_audit.py` (a
   variant of `slavery_system_audit.py`), `test_smoke.py`
 
