@@ -38,6 +38,7 @@ class Consequence:
     - coupling:     connections to other consequences
     - buffer:       how much deferral capacity remains
 
+    ```
     English model:  consequence = fixed_number (wrong)
     Process model:  consequence = f(t, coupling, buffer_state) (correct)
     """
@@ -148,6 +149,7 @@ class ConsequenceField:
     """
     Multiple consequences coupled together.
 
+    ```
     When one consequence accelerates, coupled consequences feel it.
     When one buffer breaks, coupled buffers get stressed.
     This is why failures cascade — they're not independent.
@@ -245,6 +247,7 @@ class ComfortAudit:
     """
     Measures the actual cost of choosing comfort over consequence.
 
+    ```
     For any action: what is the immediate consequence?
     If buffered: where does the consequence go?
     What is the velocity of the deferred consequence?

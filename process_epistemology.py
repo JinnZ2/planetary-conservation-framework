@@ -40,6 +40,7 @@ class StateModel:
     """
     English/Western institutional knowledge model.
 
+    ```
     Treats properties as fixed until proven otherwise.
     Requires EVIDENCE of change before updating.
     Cannot see change that hasn't yet crossed a threshold.
@@ -76,6 +77,7 @@ class ProcessModel:
     """
     Ojibwe/consequence-integrated knowledge model.
 
+    ```
     Treats ALL properties as processes with trajectory.
     Does not require evidence of change — assumes change is constant.
     Tracks direction, velocity, acceleration, coupling.
@@ -123,6 +125,7 @@ class Process:
     """
     A property understood as process, not state.
 
+    ```
     "The truck is redding" means:
     - Current state: red
     - Velocity: fading (UV exposure, oxidation)

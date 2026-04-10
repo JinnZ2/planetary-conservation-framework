@@ -50,6 +50,7 @@ class Sensor:
     """
     A sensing unit in any system: biological, institutional, AI.
 
+    ```
     Key insight: the sensor's MODE is determined by its INCENTIVE,
     not by its capability. A capable sensor with corrupted incentives
     is worse than a weak sensor with accurate incentives, because
@@ -146,6 +147,7 @@ class SensorNetwork:
     """
     Array of sensors monitoring a system.
 
+    ```
     Key diagnostic: What percentage of sensors are reporting true?
     When that drops below threshold, the system is blind.
     It doesn't know it's blind because blind sensors report green.
@@ -262,6 +264,7 @@ class InstitutionalSensorCorruption:
     """
     Models how institutions systematically corrupt their own sensors.
 
+    ```
     Mechanism:
     1. Institution needs to report stability (funding, legitimacy, power)
     2. Sensors that report instability threaten institutional survival
@@ -327,6 +330,7 @@ def demo_buffer_failure():
     100 sensors. 10 integrated (consequence-readers).
     40 institutional (buffered). 50 corrupted (comfort-captured).
 
+    ```
     Watch what happens as ground truth degrades.
     The network reports green until it doesn't.
     """

@@ -21,7 +21,9 @@ THE CORRUPTION PATTERN
 
 2. Literal markdown code fences (```) appear on their own lines where the
    rendered code blocks had fence separators. Inside a Python module they
-   are parse errors.
+   are parse errors — EXCEPT when they fall inside a docstring, where
+   they are legitimate markdown content of the string. The repair tracks
+   """ state while walking and only strips fences outside docstring regions.
 
 3. Line 1 of the module is a comment-form docstring: `# """...` — the
    stray `#` converts the opening triple-quote into a comment, leaving
@@ -143,8 +145,31 @@ def fix_file(path):
     if lines and lines[0].lstrip().startswith('# "'):
         lines[0] = lines[0].replace('# "', '"', 1)
 
-    # Remove lone markdown code fences
-    lines = [l for l in lines if l.strip() != '```']
+    # Remove lone markdown code fences, but ONLY when they are NOT inside
+    # a docstring. Remote files sometimes embed ``` fences inside class
+    # docstrings as markdown formatting, and those are legitimate content.
+    # Walk the lines tracking """ state so we can distinguish.
+    filtered = []
+    in_docstring = False
+    for line in lines:
+        # Count unescaped triple-double-quotes on this line (naive but
+        # sufficient for repair — repaired files will get a proper parse
+        # check afterward)
+        triple_count = line.count('"""')
+        is_fence = (line.strip() == '```')
+
+        if is_fence and not in_docstring:
+            # Stray paste-artifact fence — drop it
+            continue
+
+        filtered.append(line)
+
+        # Toggle docstring state AFTER the drop decision. A line with an
+        # odd number of """ flips the state.
+        if triple_count % 2 == 1:
+            in_docstring = not in_docstring
+
+    lines = filtered
 
     # ── Phase 2: state-machine indentation repair ──
     out = []
