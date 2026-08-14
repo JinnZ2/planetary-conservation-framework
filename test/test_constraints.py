@@ -27,7 +27,16 @@ from src.planetary_constants import (
     accumulated_heat_zj,
     forcing_as_eei_fraction,
     compute_margins,
+    MINERALS,
+    MINERAL_KEY_ALIASES,
+    SPACE_EXPORT_THRESHOLD_FRACTION,
+    canonical_mineral_key,
+    conservation_ceiling_kg_yr,
+    overshoot_ratio,
+    production_kg_yr,
+    space_export_ceiling_kg_yr,
 )
+from src.constants import MINERAL_DATA
 
 
 class TestWaterBudget(unittest.TestCase):
@@ -589,6 +598,94 @@ class TestCascadeEngineClimateLink(unittest.TestCase):
         paths = engine.trace_cascade("climate", max_depth=4)
         targets = {step["to"] for p in paths for step in p["path"]}
         self.assertIn("thermosphere", targets)
+
+
+class TestConstantsUnification(unittest.TestCase):
+    """planetary_constants.MINERALS is the single source of truth.
+
+    Regression: three modules each kept their own copy of global production and
+    silently disagreed on cobalt (190,000,000 vs 220,000,000 kg/yr) for the life
+    of the duplication. These tests fail if any copy reappears.
+    """
+
+    def test_all_modules_agree_on_production(self):
+        for legacy_key in MINERAL_KEY_ALIASES:
+            canonical = production_kg_yr(legacy_key)
+            with self.subTest(mineral=legacy_key):
+                self.assertEqual(
+                    MINERAL_DATA[legacy_key]["global_production_kg_per_year"],
+                    canonical,
+                    "src/constants.py disagrees with planetary_constants",
+                )
+                self.assertEqual(
+                    CrustalMaterialThroughput.GLOBAL_PRODUCTION[legacy_key],
+                    canonical,
+                    "src/constraints.py disagrees with planetary_constants",
+                )
+
+    def test_same_mineral_set_across_modules(self):
+        self.assertEqual(
+            set(MINERAL_DATA),
+            set(CrustalMaterialThroughput.GLOBAL_PRODUCTION),
+        )
+        self.assertEqual(set(MINERAL_DATA), set(MINERAL_KEY_ALIASES))
+
+    def test_space_export_ceiling_is_derived_not_stored(self):
+        for legacy_key in MINERAL_KEY_ALIASES:
+            with self.subTest(mineral=legacy_key):
+                self.assertAlmostEqual(
+                    space_export_ceiling_kg_yr(legacy_key),
+                    production_kg_yr(legacy_key) * SPACE_EXPORT_THRESHOLD_FRACTION,
+                )
+                self.assertAlmostEqual(
+                    MINERAL_DATA[legacy_key]["space_export_ceiling_kg_yr"],
+                    space_export_ceiling_kg_yr(legacy_key),
+                )
+
+    def test_law6_threshold_matches_canonical_fraction(self):
+        self.assertEqual(
+            CrustalMaterialThroughput.THRESHOLD_FRACTION,
+            SPACE_EXPORT_THRESHOLD_FRACTION,
+        )
+
+    def test_stored_overshoot_ratio_matches_derived(self):
+        """ratio_current_to_ceiling is a cross-check; it must not drift."""
+        for mineral, data in MINERALS.items():
+            with self.subTest(mineral=mineral):
+                self.assertAlmostEqual(
+                    data["ratio_current_to_ceiling"],
+                    overshoot_ratio(mineral),
+                    places=2,
+                )
+
+    def test_two_ceilings_are_distinct_quantities(self):
+        """The space-export cap and the conservation ceiling are unrelated.
+
+        Conflating them is the confusion this unification exists to end: the
+        space cap is a fraction of production, the conservation ceiling is a
+        reserve-horizon limit on all use.
+        """
+        for legacy_key in MINERAL_KEY_ALIASES:
+            with self.subTest(mineral=legacy_key):
+                self.assertLess(
+                    space_export_ceiling_kg_yr(legacy_key),
+                    conservation_ceiling_kg_yr(legacy_key),
+                )
+
+    def test_alias_resolution(self):
+        self.assertEqual(canonical_mineral_key("rare_earths"), "rare_earth_aggregate")
+        self.assertEqual(canonical_mineral_key("high_purity_copper"), "copper")
+        # Canonical names resolve to themselves.
+        self.assertEqual(canonical_mineral_key("tantalum"), "tantalum")
+        with self.assertRaises(KeyError):
+            canonical_mineral_key("unobtainium")
+
+    def test_cobalt_production_matches_cited_source(self):
+        """USGS MCS 2025 reports ~290,000 t world mine production for 2024."""
+        cobalt = MINERALS["cobalt"]
+        self.assertEqual(cobalt["current_production_kg_yr"], 290_000_000)
+        self.assertTrue(cobalt.get("production_verified"))
+        self.assertIn("USGS", cobalt.get("production_source", ""))
 
 
 if __name__ == "__main__":

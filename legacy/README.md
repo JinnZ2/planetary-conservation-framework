@@ -117,3 +117,90 @@ failure mode `buffer_sensor_corruption.py` models, occurring inside the
 instrument itself.
 
 **Standing lesson:** every published output in this repo is a claim. Run it.
+
+---
+
+### 3. Three copies of the mineral production figures — one disagreed
+
+**Status:** resolved 2026-08-14. `annual_ceiling_kg` retired; cobalt production
+corrected against the cited source.
+
+This is the open item entry 1 left behind: the naming rename from
+`Possible-addons.md` was never finished, and `src/constants.py` and
+`src/planetary_constants.py` were "not unified."
+
+**What was actually wrong — worse than the naming.** Three modules each kept
+their own copy of global mineral production:
+
+| | `constants.py` | `constraints.py` | `planetary_constants.py` |
+|---|---|---|---|
+| rare earths | 350,000,000 | 350,000,000 | 350,000,000 |
+| copper | 22,000,000,000 | 22,000,000,000 | 22,000,000,000 |
+| lithium | 180,000,000 | 180,000,000 | 180,000,000 |
+| **cobalt** | **220,000,000** | **220,000,000** | **190,000,000** |
+| gallium | 500,000 | 500,000 | 500,000 |
+| indium | 900,000 | 900,000 | 900,000 |
+
+Cobalt disagreed by 16%, in a framework whose entire premise is auditable
+numbers. Nothing detected it because nothing compared them.
+
+**Searching for unknowns — which figure was right?**
+
+Neither. Both cite USGS. USGS Mineral Commodity Summaries 2025 (published
+January 2025) reports world cobalt mine production for 2024 at approximately
+**290,000 metric tons = 290,000,000 kg** — a record high, with Congo (Kinshasa)
+at ~76% of production and Indonesia ~10%. The repo's two values were 24% and 34%
+low respectively. The disagreement was the visible symptom; both branches being
+stale was the actual finding.
+
+Corrected to 290,000,000 kg/yr, carrying `production_source`, `production_year`,
+and `production_verified` fields. Consequence: cobalt's Law 6 space-export
+ceiling rises from 22,000 to 29,000 kg/yr. Rare earths remain the binding
+mineral in every scenario checked, so no published output changed. The direct
+USGS PDF was unreachable from this environment (egress blocked); the figure rests
+on two independent secondary retrievals of MCS 2025 and should be re-checked
+against the primary document when reachable.
+
+**The naming defect.** `annual_ceiling_kg` was:
+- **stored**, though it is exactly `production × threshold_fraction`
+- **read by nothing** — `materials.py` recomputes from production and fraction
+- **named so generically** that the same "35,000" appeared to mean both the
+  space-export cap and the global conservation ceiling (35,000,000)
+
+Retired in favour of `space_export_ceiling_kg_yr`, derived on every access.
+
+**The two ceilings, now documented at the top of `MINERALS`:**
+
+| | question it answers | derived from |
+|---|---|---|
+| `conservation_ceiling_kg_yr` | how much may humanity draw per year, all uses, on a 100+ year reserve horizon? | reserves + recycling rates |
+| `space_export_ceiling_kg_yr` | how much of that may a space program take? | `SPACE_EXPORT_THRESHOLD_FRACTION` × current production |
+
+They are numerically unrelated and answer different questions. Conflating them
+was the confusion `Possible-addons.md` predicted three years of naming ago.
+
+**Fix.** `planetary_constants.MINERALS` is now the single source of truth.
+`constants.MINERAL_DATA` and `CrustalMaterialThroughput.GLOBAL_PRODUCTION` are
+built from it via `MINERAL_KEY_ALIASES`; neither stores a production figure.
+Accessors (`production_kg_yr`, `space_export_ceiling_kg_yr`, `overshoot_ratio`,
+`conservation_ceiling_kg_yr`, `canonical_mineral_key`) resolve either naming
+scheme. `compute_margins()` derives `overshoot_factor` rather than reading the
+stored ratio.
+
+**Rerun / verification.** 61 tests pass (was 53). `TestConstantsUnification`
+was confirmed to work by reintroducing the old cobalt value — it fails, naming
+cobalt. That negative test is the point: the guard is only worth having if it
+demonstrably fires.
+
+**What this cost:** nothing yet, and that is the uncomfortable part. Cobalt was
+never the binding mineral, so a 16% internal contradiction sat in a published
+constraint framework without consequence — and therefore without detection. The
+next duplicated constant might bind.
+
+**Standing lesson:** a derived value that is stored will eventually disagree
+with its own derivation. Derive it, or test that it matches.
+
+**Still open:** the remaining eight `MINERALS` production figures have not been
+re-verified against primary sources. Only cobalt carries
+`production_verified: True`. The rest should be checked and stamped the same
+way — the audit that found cobalt did not clear the others.

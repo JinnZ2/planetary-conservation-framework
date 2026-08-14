@@ -23,7 +23,7 @@ src/                        # Core framework (importable package)
                             #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
-  test_constraints.py       # 53 unit tests (unittest) — no __init__.py
+  test_constraints.py       # 61 unit tests (unittest) — no __init__.py
 
 data/
   current_state.json        # Current constraint margins (last updated 2026-02-27)
@@ -67,7 +67,7 @@ stdlib-swap divergences from their canonical versions.
 
 ## Commands
 
-### Run all tests (53 tests)
+### Run all tests (61 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -185,7 +185,7 @@ Optional fields:
 **In `src/constants.py`:**
 - `MeasuredValue` — value with unit, source, measured_date, uncertainty_pct
 - `DataCenterModule` — mass budget for a ~10MW space data center module
-- `MINERAL_DATA` — dict with production rates, thresholds, and ceilings for 6 critical minerals
+- `MINERAL_DATA` — space-facing view of 6 critical minerals, **derived** from `planetary_constants.MINERALS` at import. Keys: `global_production_kg_per_year`, `threshold_fraction`, `space_export_ceiling_kg_yr`, `conservation_ceiling_kg_yr`, `canonical_key`, `source`, `notes`. Stores no production figures of its own
 
 **In `src/materials.py`:**
 - `MaterialEntry` — material, mass_kg, origin, destination, energy/CO2 costs
@@ -197,7 +197,10 @@ Optional fields:
 - `ATMOSPHERIC` — sub-constraints for black carbon, alumina, mesospheric water vapor
 - `HYDROGEN_ESCAPE` — policy-choice caps with directional risk framing
 - `GEODYNAMO` — directional risk indicator (not a hard limit)
-- `MINERALS` — 10 minerals (rare_earth_aggregate, copper, cobalt, indium, gallium, tantalum, lithium, silicon_refined, aluminum) with production/threshold data
+- `MINERALS` — 9 minerals (rare_earth_aggregate, copper, cobalt, indium, gallium, tantalum, lithium, silicon_refined, aluminum). **The single source of truth for `current_production_kg_yr`** — no other module may store these figures
+- `SPACE_EXPORT_THRESHOLD_FRACTION` — 0.0001. Law 6's allocation rule: the share of current production a space program may draw
+- `MINERAL_KEY_ALIASES` — legacy space-facing keys (`rare_earths`, `high_purity_copper`) → canonical keys (`rare_earth_aggregate`, `copper`)
+- `canonical_mineral_key()`, `production_kg_yr()`, `conservation_ceiling_kg_yr()`, `space_export_ceiling_kg_yr()`, `overshoot_ratio()` — accessors that resolve either naming. Ceilings and ratios are **derived on every call, never stored**
 - `LAUNCH` — max realistic cadence, historical data, pad constraints
 - `ENERGY` — thermodynamic minimums, delta-v requirements, meteoritic influx
 - `compute_margins()` — calculates current margins across all constraint categories
@@ -238,14 +241,16 @@ Status is derived from margin percentage in `_status_from_margin()`:
 ### Important Caveats
 - Law 4 (Geodynamo) has no implementation class — it appears in the law numbering but is enforced through Laws 1-3. `check_proposal()` therefore evaluates **six** laws, not seven; any output claiming "N of 7" is wrong
 - The `constraint_checks.jsonl` log file is written to cwd; add to `.gitignore` (already done)
-- **`src/constants.py` and `src/planetary_constants.py` are not unified.** `constants.py` still uses the old `annual_ceiling_kg` naming and remains the live source for `MaterialLedger` (`src/materials.py:113`); `planetary_constants.py` uses `conservation_ceiling_kg_yr` and is imported by nothing. The two use the same 35,000 figure for different quantities — space-export cap vs. global conservation ceiling. The rename from `legacy/Possible-addons.md` was never finished. Open item
+- **`src/planetary_constants.py` is the single source of truth for mineral production figures.** `constants.py` and `constraints.py` derive from it and must never store their own copies — three copies previously disagreed on cobalt. `TestConstantsUnification` fails if a copy reappears (resolved 2026-08-14; see `legacy/README.md`)
+- **Two ceilings, two questions — do not conflate them.** `space_export_ceiling_kg_yr` is Law 6's allocation rule (a fixed 0.01% fraction of *current production*, `SPACE_EXPORT_THRESHOLD_FRACTION`). `conservation_ceiling_kg_yr` is the reserve-horizon limit on *all* human use. They are numerically unrelated. The old name `annual_ceiling_kg` was stored, read by nothing, and generic enough that the same "35,000" appeared to mean both
 - Adding a documented field to the proposal schema is not enough — it must be **read** by the relevant constraint class. `rare_earth_kg_per_year` was documented in three places and read by none for the life of the field (fixed 2026-08-14; see `legacy/README.md`). Per-mineral shortcut fields are registered in `CrustalMaterialThroughput.DECLARED_MINERAL_FIELDS`
 
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 53 tests across 10 test classes
-- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker
+- 61 tests across 14 test classes
+- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification
+- `TestConstantsUnification` is a drift guard, not a feature test: it fails if any module reintroduces its own copy of mineral production figures, or if a stored derived value (`ratio_current_to_ceiling`) diverges from its computed counterpart
 - No CI/CD pipeline configured
 - No linting or formatting tools configured
 - No pre-commit hooks active

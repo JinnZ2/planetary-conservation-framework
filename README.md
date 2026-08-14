@@ -101,7 +101,7 @@ Law 2 is safe *for this proposal* because methane/LOX at 500 launches/year puts
 | Path | What it holds |
 |---|---|
 | `src/` | The framework — checker, constraints, cascade, simulator, materials, locations, constants |
-| `test/` | 53 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
+| `test/` | 61 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
 | `data/` | Current constraint margins and pre-defined scenarios |
 | `examples/` | Runnable demos (`python -m examples.check_proposal`) |
 | `tools/` | Maintenance utilities |

@@ -145,7 +145,7 @@ These exist here but not in `earth-systems-physics`:
   cascade, simulator, materials, locations, constants, planetary_constants),
   including the WMO State of the Global Climate 2025 Earth Energy
   Imbalance integration
-- `test/test_constraints.py` — 53 unit tests (unittest)
+- `test/test_constraints.py` — 61 unit tests (unittest)
 - `data/current_state.json`, `data/scenarios.json`
 - `examples/check_proposal.py`
 - `tools/fix_paste_corruption.py` — maintenance tool

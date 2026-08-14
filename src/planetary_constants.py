@@ -233,6 +233,31 @@ GEODYNAMO = {
 #
 # Values derived from: USGS reserves data, recycling rates, demand
 # growth projections, and cascade failure analysis from atomic_accounting.py
+#
+# -----------------------------------------------------------------------------
+# TWO CEILINGS, TWO QUESTIONS — do not confuse them
+# -----------------------------------------------------------------------------
+#
+#   conservation_ceiling_kg_yr
+#       "How much may humanity draw from the crust per year, for ALL uses,
+#        while keeping a 100+ year reserve horizon?"
+#       Derived from reserves and recycling rates. For most minerals current
+#       production ALREADY exceeds it — that is the finding, not an error.
+#
+#   space_export_ceiling_kg_yr  (see SPACE_EXPORT_THRESHOLD_FRACTION below)
+#       "How much of that draw may a space program take?"
+#       Defined by Conservation Law 6 as a fixed fraction of *current
+#       production*, not of the conservation ceiling. It is an allocation
+#       rule, not a sustainability limit.
+#
+# The two are numerically unrelated and answer different questions. An earlier
+# revision stored them under names that did not distinguish them
+# (`annual_ceiling_kg` vs `conservation_ceiling_kg_yr`), which is how the same
+# "35,000" appeared to mean two things. See legacy/README.md.
+#
+# `current_production_kg_yr` here is the SINGLE SOURCE OF TRUTH for production
+# figures across the framework. src/constants.py and src/constraints.py derive
+# from it; none of them keeps its own copy. test_constraints.py enforces this.
 
 MINERALS = {
     "rare_earth_aggregate": {
@@ -263,10 +288,20 @@ MINERALS = {
     },
     "cobalt": {
         "conservation_ceiling_kg_yr": 100_000_000,
-        "current_production_kg_yr": 190_000_000,
-        "ratio_current_to_ceiling": 1.9,
-        "notes": "Battery demand driving overshoot. DRC concentration risk.",
+        "current_production_kg_yr": 290_000_000,
+        "ratio_current_to_ceiling": 2.9,
+        "notes": (
+            "Battery demand driving overshoot. DRC concentration risk — Congo "
+            "(Kinshasa) is ~76% of world mine production, Indonesia ~10%. "
+            "Production figure corrected 2026-08-14: this module previously "
+            "held 190,000,000 while constants.py and constraints.py held "
+            "220,000,000. Both were below the cited source. See "
+            "legacy/README.md."
+        ),
         "ceiling_basis": "derived_from_reserves_and_recycling",
+        "production_source": "USGS Mineral Commodity Summaries 2025 (2024 estimate)",
+        "production_year": 2024,
+        "production_verified": True,
         "uncertainty_pct": 25,
         "recycling_rate_current_pct": 13,
         "recycling_rate_needed_for_sustainability_pct": 55,
@@ -337,6 +372,66 @@ MINERALS = {
         "recycling_rate_needed_for_sustainability_pct": 45,
     },
 }
+
+
+# Conservation Law 6: a space program may draw at most this fraction of current
+# global production of any critical mineral. An allocation rule (policy choice),
+# not a sustainability limit — see the TWO CEILINGS note above.
+SPACE_EXPORT_THRESHOLD_FRACTION = 0.0001  # 0.01%
+
+# Legacy mineral keys used by src/constants.py and src/constraints.py, mapped to
+# canonical MINERALS keys. Kept so the older, space-facing naming keeps working
+# without a second copy of the underlying production figures.
+MINERAL_KEY_ALIASES = {
+    "rare_earths": "rare_earth_aggregate",
+    "high_purity_copper": "copper",
+    "lithium": "lithium",
+    "cobalt": "cobalt",
+    "gallium": "gallium",
+    "indium": "indium",
+}
+
+
+def canonical_mineral_key(mineral: str) -> str:
+    """Resolve a legacy or canonical mineral name to its MINERALS key."""
+    key = MINERAL_KEY_ALIASES.get(mineral, mineral)
+    if key not in MINERALS:
+        raise KeyError(
+            f"Unknown mineral {mineral!r}. Known: "
+            f"{sorted(set(MINERALS) | set(MINERAL_KEY_ALIASES))}"
+        )
+    return key
+
+
+def production_kg_yr(mineral: str) -> float:
+    """Current global production for a mineral, by canonical or legacy name.
+
+    The single source of truth. Do not copy these figures into other modules —
+    import this instead.
+    """
+    return MINERALS[canonical_mineral_key(mineral)]["current_production_kg_yr"]
+
+
+def conservation_ceiling_kg_yr(mineral: str) -> float:
+    """Annual draw, all uses, compatible with a 100+ year reserve horizon."""
+    return MINERALS[canonical_mineral_key(mineral)]["conservation_ceiling_kg_yr"]
+
+
+def space_export_ceiling_kg_yr(mineral: str) -> float:
+    """Conservation Law 6 allocation: the space-program share of production.
+
+    Derived, never stored — storing it is how the two ceilings drifted apart.
+    """
+    return production_kg_yr(mineral) * SPACE_EXPORT_THRESHOLD_FRACTION
+
+
+def overshoot_ratio(mineral: str) -> float:
+    """Current production divided by the conservation ceiling.
+
+    >1.0 means the mineral is already being drawn faster than a 100-year
+    reserve horizon supports, before any space demand is added.
+    """
+    return production_kg_yr(mineral) / conservation_ceiling_kg_yr(mineral)
 
 
 # =============================================================================
@@ -634,7 +729,12 @@ def compute_margins() -> dict:
                 -overshoot / data["conservation_ceiling_kg_yr"]
             ),
             "already_exceeding": overshoot > 0,
-            "overshoot_factor": data["ratio_current_to_ceiling"],
+            # Derived, not read from the stored ratio_current_to_ceiling — the
+            # stored value is kept only as a cross-check (see test suite).
+            "overshoot_factor": overshoot_ratio(mineral),
+            "space_export_ceiling_kg_yr": (
+                data["current_production_kg_yr"] * SPACE_EXPORT_THRESHOLD_FRACTION
+            ),
             "uncertainty_pct": data["uncertainty_pct"],
         }
 

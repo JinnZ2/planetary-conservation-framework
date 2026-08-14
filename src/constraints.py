@@ -14,6 +14,12 @@ from enum import Enum
 from datetime import datetime
 import json
 
+from .planetary_constants import (
+    MINERAL_KEY_ALIASES,
+    SPACE_EXPORT_THRESHOLD_FRACTION,
+    production_kg_yr,
+)
+
 
 class ConstraintStatus(Enum):
     SAFE = "SAFE"
@@ -372,7 +378,7 @@ class CrustalMaterialThroughput:
     LAW_NUMBER = 6
     NAME = "Crustal Material Throughput"
 
-    THRESHOLD_FRACTION = 0.0001
+    THRESHOLD_FRACTION = SPACE_EXPORT_THRESHOLD_FRACTION
 
     DEFAULT_MATERIAL_PER_MODULE = {
         "rare_earths": (5_000, 10_000),
@@ -383,13 +389,12 @@ class CrustalMaterialThroughput:
         "indium": (2, 8),
     }
 
+    # Derived from planetary_constants.MINERALS — the single source of truth.
+    # This module previously kept its own copy, which silently disagreed with
+    # planetary_constants on cobalt. See legacy/README.md.
     GLOBAL_PRODUCTION = {
-        "rare_earths": 350_000_000,
-        "high_purity_copper": 22_000_000_000,
-        "lithium": 180_000_000,
-        "cobalt": 220_000_000,
-        "gallium": 500_000,
-        "indium": 900_000,
+        legacy_key: production_kg_yr(legacy_key)
+        for legacy_key in MINERAL_KEY_ALIASES
     }
 
     # Convenience fields on the proposal dict that declare annual demand for a
