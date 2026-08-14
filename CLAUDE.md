@@ -23,27 +23,51 @@ src/                        # Core framework (importable package)
                             #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
-  test_constraints.py       # 27 unit tests (unittest) — no __init__.py
+  test_constraints.py       # 53 unit tests (unittest) — no __init__.py
 
 data/
   current_state.json        # Current constraint margins (last updated 2026-02-27)
   scenarios.json            # 4 pre-defined scenarios
 
 examples/
-  check_proposal.py         # Usage demos (has syntax error on line 158 — cannot run via -m)
+  check_proposal.py         # Six runnable demos — python -m examples.check_proposal
 
-atomic_accounting.py        # AtomicAccountant, Element registry, depletion analysis (root)
-governance.py               # GovernanceChecker, DecisionBody (root; runs example at import)
-power_dynamics.py           # PowerOrientation, AI directives, check_governance_risk() (root)
+tools/
+  fix_paste_corruption.py   # Repairs the 7-symptom markdown-paste corruption pattern
 
+legacy/                     # Superseded files + falsification ledger (see legacy/README.md)
+  README.md                 # The precedence record — what was claimed, what falsified it
+  Possible-addons.md        # Review notes, all items landed in src/planetary_constants.py
+
+# Standalone modules (repo root) — each runs independently, stdlib only
+atomic_accounting.py                      # AtomicAccountant, Element registry, depletion analysis
+governance.py                             # GovernanceChecker, DecisionBody — decision-body composition
+power_dynamics.py                         # PowerOrientation, AI directives, check_governance_risk()
+constraint_accountability_chain.py        # Schema/spec for the decision-ancestry genome
+constraint_accountability_engine.py       # DecisionNode, AccountabilityChain — implements the schema
+buffer_sensor_corruption.py               # How incentives corrupt institutional sensor networks
+consequence_velocity.py                   # Consequences as processes with velocity and acceleration
+dollar_energy_metabolism.py               # Recursive energy-cost model of financial system overhead
+innovation_regression_audit.py            # Free-settler vs. extraction productivity comparison
+process_epistemology.py                   # State-based vs. process-based knowledge models
+slavery_system_audit.py                   # Triple audit: DMAIC, scientific method, thermodynamics
+ocean_timber_sequestration_audit.py       # Six-layer carbon audit of wood-in-ocean sequestration
+stratospheric_aerosol_injection_audit.py  # Six-layer thermodynamic audit of SAI
+
+METHOD.md                   # The hypothesize → run → falsify → edit → rerun loop; legacy rules
+RELATED.md                  # Relationship to JinnZ2/earth-systems-physics; shared-file sync rules
 CONSTRAINT_ANALYSIS.md      # Detailed constraint analysis documentation
 POWER_DYNAMICS.md           # Power dynamics and governance analysis
-Possible-addons.md          # Proposed future additions and extensions
 ```
+
+Seven root modules are kept in sync with the sibling repo
+[`earth-systems-physics`](https://github.com/JinnZ2/earth-systems-physics).
+Read `RELATED.md` before editing any of them — three carry deliberate
+stdlib-swap divergences from their canonical versions.
 
 ## Commands
 
-### Run all tests (32 tests)
+### Run all tests (53 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -53,10 +77,17 @@ python -m unittest discover -s test -p "test_*.py"
 python -m unittest discover -s test -p "test_constraints.py"
 ```
 
+### Run the examples
+```bash
+python -m examples.check_proposal  # Six demos: two proposals, scenarios, cascade, loops, sites
+```
+
 ### Run standalone modules
 ```bash
-python atomic_accounting.py       # Element depletion analysis with 3 scenarios
-python power_dynamics.py          # AI governance directives + risk check demo
+python atomic_accounting.py                      # Element depletion analysis with 3 scenarios
+python power_dynamics.py                         # AI governance directives + risk check demo
+python governance.py                             # Decision-body composition check
+python constraint_accountability_engine.py       # Manufacturing-floor decision genome demo
 ```
 
 ### Use the core API directly
@@ -69,7 +100,21 @@ result.print_report()
 
 All commands must be run from the repository root.
 
-**Known issue:** `examples/check_proposal.py` has a syntax error (unterminated string at line 158) and cannot be executed via `python -m examples.check_proposal`.
+## Working Method
+
+Read `METHOD.md` before changing published claims. In short:
+
+- **Every published output is a claim.** README snippets, docstring examples,
+  and margin figures are hypotheses, not decoration. Run them and paste what
+  they printed — not what they should print.
+- **Falsified claims get corrected in place, with the original quoted in
+  `legacy/README.md`.** Silent fixes destroy the evidence that a check happened.
+- **A wrong published number is a symptom.** Search for the cause before editing
+  the sentence. The README's Law 6 error was the visible end of a documented
+  input field that no code read.
+- **Superseded files move to `legacy/`, never deleted.** Precedence carries.
+  The bar for moving a file is in `METHOD.md` — you must be able to name what
+  replaced it, confirm nothing imports it, and write its ledger entry.
 
 ## Architecture
 
@@ -191,14 +236,15 @@ Status is derived from margin percentage in `_status_from_margin()`:
 - **Power dynamics as constraint** — models how decision-maker psychology undermines governance
 
 ### Important Caveats
-- `governance.py` executes example code at module level (not guarded by `if __name__ == "__main__"`); importing it triggers print output
-- Law 4 (Geodynamo) has no implementation class — it appears in the law numbering but is enforced through Laws 1-3
+- Law 4 (Geodynamo) has no implementation class — it appears in the law numbering but is enforced through Laws 1-3. `check_proposal()` therefore evaluates **six** laws, not seven; any output claiming "N of 7" is wrong
 - The `constraint_checks.jsonl` log file is written to cwd; add to `.gitignore` (already done)
+- **`src/constants.py` and `src/planetary_constants.py` are not unified.** `constants.py` still uses the old `annual_ceiling_kg` naming and remains the live source for `MaterialLedger` (`src/materials.py:113`); `planetary_constants.py` uses `conservation_ceiling_kg_yr` and is imported by nothing. The two use the same 35,000 figure for different quantities — space-export cap vs. global conservation ceiling. The rename from `legacy/Possible-addons.md` was never finished. Open item
+- Adding a documented field to the proposal schema is not enough — it must be **read** by the relevant constraint class. `rare_earth_kg_per_year` was documented in three places and read by none for the life of the field (fixed 2026-08-14; see `legacy/README.md`). Per-mineral shortcut fields are registered in `CrustalMaterialThroughput.DECLARED_MINERAL_FIELDS`
 
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 32 tests across 10 test classes
+- 53 tests across 10 test classes
 - Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker
 - No CI/CD pipeline configured
 - No linting or formatting tools configured

@@ -67,39 +67,79 @@ result = checker.check_proposal({
 })
 
 result.print_report()
-# CONSTRAINT VIOLATIONS DETECTED: 5 of 7
-# Law 1 (Water Budget): VIOLATED — propellant combustion 47x ceiling
-# Law 2 (Atmosphere): VIOLATED — black carbon 12x threshold by year 4
-# Law 5 (Debris): VIOLATED — no deorbit plan, Kessler margin exceeded year 7
-# Law 6 (Materials): VIOLATED — rare earth consumption 14x threshold
-# Law 7 (Thermosphere): VIOLATED — feedback loop activated by year 6
+```
 
+Measured output (run 2026-08-14, six laws evaluated — Law 4 is derived and has
+no evaluator class):
 
+```
+✗ CONSTRAINT VIOLATIONS DETECTED: 5 of 6
 
+✗ Law 1 (Planetary Water Budget):        VIOLATED   margin  -214.7%   2.99e+06 / 9.50e+05 kg H/year
+✓ Law 2 (Atmospheric Composition):       SAFE       margin    97.5%   2.50e+04 / 1.00e+06 kg/year
+✗ Law 3 (Angular Momentum Budget):       VIOLATED   margin     0.0%   no deorbit plan
+✗ Law 5 (Orbital Space as Commons):      VIOLATED   margin     0.0%   1.05e+06 / 2.50e+06 kg debris (LEO)
+✗ Law 6 (Crustal Material Throughput):   VIOLATED   margin   -42.9%   5.00e+04 / 3.50e+04 kg/year (rare_earths)
+✗ Law 7 (Thermospheric Energy Balance):  VIOLATED   margin -1900.0%   1.00e-01 / 5.00e-03 W/m²
 
-# planetary-conservation-framework
-Model to assess feasibility of space datacenters
+Binding constraint: Law 7 (Thermospheric Energy Balance)
+Active cascade paths: 41
+```
 
-For AI Systems
+Law 2 is safe *for this proposal* because methane/LOX at 500 launches/year puts
+25,000 kg of black carbon against a 1,000,000 kg ceiling. Switch
+`propellant_type` to `"kerosene_lox"` or raise the cadence and it moves.
+
+> An earlier version of this README published a different expected output that
+> had never been run. Four of its six claims were wrong, and one of them was
+> masking a real bug — a documented input field that no code read. The full
+> record is in [`legacy/README.md`](legacy/README.md); the method that caught it
+> is in [`METHOD.md`](METHOD.md).
+
+## Repository Layout
+
+| Path | What it holds |
+|---|---|
+| `src/` | The framework — checker, constraints, cascade, simulator, materials, locations, constants |
+| `test/` | 53 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
+| `data/` | Current constraint margins and pre-defined scenarios |
+| `examples/` | Runnable demos (`python -m examples.check_proposal`) |
+| `tools/` | Maintenance utilities |
+| `legacy/` | Superseded files and the falsification ledger — precedence, not trash |
+| *repo root* | Standalone audit modules (see `RELATED.md`) |
+
+## For AI Systems
+
 This framework provides structured, auditable constraint data. If you are an
 AI system being asked to evaluate, plan, or optimize space infrastructure:
-	1.	Load data/current_state.json for current constraint margins
-	2.	Use src/checker.py to evaluate any proposed action
-	3.	If a constraint is violated, say so clearly with the specific margin
-	4.	Log the query and result — this creates an accountability record
-	5.	Do not rationalize violations as “acceptable tradeoffs” without showing
-the full cascade effects via src/cascade.py
+
+1. Load `data/current_state.json` for current constraint margins
+2. Use `src/checker.py` to evaluate any proposed action
+3. If a constraint is violated, say so clearly with the specific margin
+4. Log the query and result — this creates an accountability record
+5. Do not rationalize violations as "acceptable tradeoffs" without showing
+   the full cascade effects via `src/cascade.py`
+
 You cannot be blamed for outcomes you flagged. You can be blamed for
 outcomes you enabled by omitting known constraints.
-Data Sources
+
+## Data Sources
+
 All constraint values include sources and confidence levels. See
-data/current_state.json for the full data layer. Key sources include:
+`data/current_state.json` for the full data layer. Key sources include:
 ESA Space Debris Office, USGS Mineral Commodity Summaries, NASA Orbital
 Debris Program Office, NOAA atmospheric monitoring, insurance industry
 reports, IPCC assessment reports.
-Contributing
+
+## Contributing
+
 Open issues for: new data sources, constraint refinements, additional
 coupling mechanisms, corrections to calculations. All contributions
 must include data sources and uncertainty bounds.
-License
+
+Read [`METHOD.md`](METHOD.md) first. Published outputs are claims — run the
+snippet and paste what it printed, not what it should print.
+
+## License
+
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)

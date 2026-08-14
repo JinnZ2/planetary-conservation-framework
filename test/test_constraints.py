@@ -208,6 +208,53 @@ class TestMinerals(unittest.TestCase):
             no_recycle.margin_remaining_pct
         )
 
+    def test_declared_rare_earth_field_is_honored(self):
+        """rare_earth_kg_per_year is a documented proposal field and must bind.
+
+        Regression: the field was documented in the schema but never read, so a
+        proposal declaring rare earth demand above the ceiling reported SAFE.
+        """
+        c = CrustalMaterialThroughput()
+        # Ceiling = 350_000_000 * 0.0001 = 35_000 kg/yr
+        result = c.evaluate({
+            "modules_per_year": 1,
+            "recycling_rate": 0.0,
+            "rare_earth_kg_per_year": 50_000,
+        })
+        self.assertEqual(result.status, ConstraintStatus.VIOLATED)
+        self.assertAlmostEqual(result.current_value, 50_000)
+        self.assertAlmostEqual(result.ceiling_value, 35_000)
+
+    def test_declared_rare_earth_respects_recycling(self):
+        c = CrustalMaterialThroughput()
+        result = c.evaluate({
+            "modules_per_year": 1,
+            "recycling_rate": 0.5,
+            "rare_earth_kg_per_year": 50_000,
+        })
+        self.assertAlmostEqual(result.current_value, 25_000)
+        self.assertNotEqual(result.status, ConstraintStatus.VIOLATED)
+
+    def test_material_requirements_overrides_declared_field(self):
+        """Most specific declaration wins: material_requirements_kg > shortcut."""
+        c = CrustalMaterialThroughput()
+        result = c.evaluate({
+            "modules_per_year": 1,
+            "recycling_rate": 0.0,
+            "rare_earth_kg_per_year": 50_000,
+            "material_requirements_kg": {"rare_earths": 1_000},
+        })
+        self.assertNotEqual(result.status, ConstraintStatus.VIOLATED)
+        self.assertNotIn("rare_earths", result.notes)
+
+    def test_reports_real_values_not_zero(self):
+        """Law 6 previously hardcoded current/ceiling to 0, making reports blank."""
+        c = CrustalMaterialThroughput()
+        result = c.evaluate({"modules_per_year": 50, "recycling_rate": 0.0})
+        self.assertGreater(result.current_value, 0)
+        self.assertGreater(result.ceiling_value, 0)
+        self.assertIn("kg/year", result.unit)
+
 
 class TestThermosphericBalance(unittest.TestCase):
     def test_zero_launches_safe(self):

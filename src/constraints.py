@@ -392,6 +392,12 @@ class CrustalMaterialThroughput:
         "indium": 900_000,
     }
 
+    # Convenience fields on the proposal dict that declare annual demand for a
+    # single mineral directly, without building a material_requirements_kg map.
+    DECLARED_MINERAL_FIELDS = {
+        "rare_earths": "rare_earth_kg_per_year",
+    }
+
     def evaluate(self, proposal: dict) -> ConstraintResult:
         modules_per_year = proposal.get("modules_per_year", 1)
         recycling_rate = proposal.get("recycling_rate", 0.0)
@@ -400,16 +406,25 @@ class CrustalMaterialThroughput:
         violations = []
         tightest_margin_pct = 100.0
         tightest_mineral = "none"
+        tightest_demand = 0.0
+        tightest_ceiling = 0.0
 
         for mineral, production in self.GLOBAL_PRODUCTION.items():
             ceiling = production * self.THRESHOLD_FRACTION
 
+            # Most specific declaration wins:
+            # material_requirements_kg > shortcut field > module-derived default.
+            shortcut_field = self.DECLARED_MINERAL_FIELDS.get(mineral)
             if mineral in custom_materials:
-                annual_demand = custom_materials[mineral] * (1 - recycling_rate)
+                raw_demand = custom_materials[mineral]
+            elif shortcut_field is not None and proposal.get(shortcut_field) is not None:
+                raw_demand = proposal[shortcut_field]
             else:
                 default_range = self.DEFAULT_MATERIAL_PER_MODULE.get(mineral, (0, 0))
                 per_module = (default_range[0] + default_range[1]) / 2
-                annual_demand = per_module * modules_per_year * (1 - recycling_rate)
+                raw_demand = per_module * modules_per_year
+
+            annual_demand = raw_demand * (1 - recycling_rate)
 
             if ceiling > 0:
                 margin_pct = ((ceiling - annual_demand) / ceiling) * 100
@@ -419,6 +434,8 @@ class CrustalMaterialThroughput:
             if margin_pct < tightest_margin_pct:
                 tightest_margin_pct = margin_pct
                 tightest_mineral = mineral
+                tightest_demand = annual_demand
+                tightest_ceiling = ceiling
 
             if margin_pct <= 0:
                 violations.append(
@@ -432,9 +449,9 @@ class CrustalMaterialThroughput:
             status=_status_from_margin(tightest_margin_pct),
             margin_remaining_pct=tightest_margin_pct,
             time_to_binding_years=None,
-            current_value=0,
-            ceiling_value=0,
-            unit="multiple minerals",
+            current_value=tightest_demand,
+            ceiling_value=tightest_ceiling,
+            unit=f"kg/year ({tightest_mineral})",
             mechanism=f"Tightest mineral: {tightest_mineral}. "
                       f"Recycling rate: {recycling_rate*100:.0f}%",
             cascade_triggers=["supply chain disruption", "price escalation",
