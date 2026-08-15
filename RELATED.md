@@ -138,6 +138,11 @@ These exist here but not in `earth-systems-physics`:
   `ocean_timber_sequestration_audit.py`, with the same six-layer structure
   and the same "solution is made of the problem" pattern match. Written
   from scratch in this repo.
+- `leverage_analysis.py` — ranks proposal modifications by conservation
+  bought per unit effort; imports `src/constraints.py`
+- `transition_pathways.py` — governance/financial/verification steps that
+  make those levers institutionally reachable, with prerequisites,
+  incumbent resistance, and durability
 - `atomic_accounting.py` — element depletion analysis
 - `governance.py` — governance checker with decision-body modelling
 - `power_dynamics.py` — AI directives and power orientation modelling
@@ -145,7 +150,7 @@ These exist here but not in `earth-systems-physics`:
   cascade, simulator, materials, locations, constants, planetary_constants),
   including the WMO State of the Global Climate 2025 Earth Energy
   Imbalance integration
-- `test/test_constraints.py` — 61 unit tests (unittest)
+- `test/test_constraints.py` — 79 unit tests (unittest)
 - `data/current_state.json`, `data/scenarios.json`
 - `examples/check_proposal.py`
 - `tools/fix_paste_corruption.py` — maintenance tool

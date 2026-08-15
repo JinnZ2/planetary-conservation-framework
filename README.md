@@ -96,12 +96,89 @@ Law 2 is safe *for this proposal* because methane/LOX at 500 launches/year puts
 > record is in [`legacy/README.md`](legacy/README.md); the method that caught it
 > is in [`METHOD.md`](METHOD.md).
 
+## What Changes Things — Leverage Analysis
+
+A checker that only says *no* leaves the useful question unasked: of the changes
+available, which smallest one buys the most margin?
+
+```bash
+python leverage_analysis.py
+```
+
+Measured output for the proposal above (run 2026-08-15, abridged):
+
+```
+  modification                 effort          Mdw  fixed  broke    score
+  commit_deorbit_plan          policy_switch     5      1      0   1000.0
+  recycling_50pct              operational      10      1      0    333.3
+  halve_rare_earth_draw        operational      12      1      0    333.3
+  full_orbital_compliance      capital           5      2      0    200.0
+  propellant_to_electric       technology       10      2      0     70.0
+  halve_launch_cadence         operational      12      0      0     33.3
+  fund_deorbit_bond            policy_switch     5      0      0      0.0
+
+  MINIMUM VIABLE SET — 3 modification(s), total effort 43:
+    • full_orbital_compliance    • recycling_50pct    • propellant_to_electric
+```
+
+Three results worth reading twice:
+
+- **The most effective single change consumes no physical resource.** Committing
+  to a deorbit plan resolves Law 3 outright. Halving launch cadence — the
+  obvious lever — resolves nothing at all. `Mdw` is the Meadows leverage rank
+  (12 = weakest); the pattern holds.
+- **Partial compliance buys nothing.** Funding a deorbit bond *alone* scores
+  zero, because Law 5 clamps unless the deorbit plan, the bond, and active
+  removal are all present. Two out of three is worth the same as none.
+- **Switching to hydrogen/LOX does not fix the water budget.** It eliminates
+  black carbon and resolves Law 7, but methane and hydrogen produce almost
+  identical H₂O per launch — hydrogen is 1.05 percentage points *worse* on
+  Law 1 at this cadence.
+
+## Why The Free Lever Hasn't Been Pulled — Transition Pathways
+
+"Free" is a claim about joules, not institutions. A commitment costing nothing
+thermodynamically is still unreachable if nothing requires, verifies, or prices
+it.
+
+```bash
+python transition_pathways.py
+```
+
+Fourteen governance, financial, verification, and industrial steps with their
+prerequisites:
+
+```
+  KEYSTONE STEPS
+  orbital_registry           unlocks 13 downstream step(s), resistance 0.35
+  liability_attribution      unlocks  5 downstream step(s), resistance 0.80
+
+  CRITICAL PATH — 18 years, 4 steps
+    orbital_registry → liability_attribution → deorbit_bond_escrow → adr_service_market
+
+  WHAT UNLOCKS THE CHEAPEST CONSERVATION LEVERS
+  commit_deorbit_plan      2 step(s),  5y: orbital_registry → public_margin_disclosure
+  fund_deorbit_bond        4 step(s), 12y: orbital_registry → independent_tracking
+                                           → liability_attribution → deorbit_bond_escrow
+```
+
+The registry unlocks nearly everything and almost nobody opposes it — it
+threatens no incumbent directly, which is exactly why it is the place to start.
+Liability attribution is the hinge: until debris damage has an owner, every
+financial instrument downstream is unpriceable, and it carries the second-highest
+resistance in the pathway. Independent tracking is flagged `DECAYS` — three steps
+depend on it, and an unfunded verifier is worse than an absent one, because it
+still produces output.
+
+Resistance and duration figures are stated judgments, flagged as such. The
+dependency structure is the durable content.
+
 ## Repository Layout
 
 | Path | What it holds |
 |---|---|
 | `src/` | The framework — checker, constraints, cascade, simulator, materials, locations, constants |
-| `test/` | 61 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
+| `test/` | 79 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
 | `data/` | Current constraint margins and pre-defined scenarios |
 | `examples/` | Runnable demos (`python -m examples.check_proposal`) |
 | `tools/` | Maintenance utilities |

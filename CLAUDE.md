@@ -23,7 +23,7 @@ src/                        # Core framework (importable package)
                             #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
-  test_constraints.py       # 61 unit tests (unittest) — no __init__.py
+  test_constraints.py       # 79 unit tests (unittest) — no __init__.py
 
 data/
   current_state.json        # Current constraint margins (last updated 2026-02-27)
@@ -40,6 +40,8 @@ legacy/                     # Superseded files + falsification ledger (see legac
   Possible-addons.md        # Review notes, all items landed in src/planetary_constants.py
 
 # Standalone modules (repo root) — each runs independently, stdlib only
+leverage_analysis.py                      # Ranks proposal modifications by conservation bought per effort
+transition_pathways.py                    # Governance/financial steps that make those levers reachable
 atomic_accounting.py                      # AtomicAccountant, Element registry, depletion analysis
 governance.py                             # GovernanceChecker, DecisionBody — decision-body composition
 power_dynamics.py                         # PowerOrientation, AI directives, check_governance_risk()
@@ -67,7 +69,7 @@ stdlib-swap divergences from their canonical versions.
 
 ## Commands
 
-### Run all tests (61 tests)
+### Run all tests (79 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -86,6 +88,8 @@ python -m examples.check_proposal  # Six demos: two proposals, scenarios, cascad
 ```bash
 python atomic_accounting.py                      # Element depletion analysis with 3 scenarios
 python power_dynamics.py                         # AI governance directives + risk check demo
+python leverage_analysis.py                      # Rank modifications for two example proposals
+python transition_pathways.py                    # Keystones, critical path, stall points
 python governance.py                             # Decision-body composition check
 python constraint_accountability_engine.py       # Manufacturing-floor decision genome demo
 ```
@@ -191,6 +195,21 @@ Optional fields:
 - `MaterialEntry` — material, mass_kg, origin, destination, energy/CO2 costs
 - `MaterialLedger` — `record()`, `check_against_ceiling()`, `energy_audit()`, `export_json()`, `export_csv()`
 
+**In `leverage_analysis.py`:**
+- `Lever` — a candidate modification: `apply` callable, `EffortClass`, Meadows rank, notes
+- `STANDARD_LEVERS` — 12 levers spanning policy switches, operational changes, capital, and technology
+- `EFFORT_WEIGHTS` — ordinal difficulty weights. **A policy choice, not derived** (`EFFORT_WEIGHT_BASIS`)
+- `MEADOWS_LEVELS` — the leverage ladder in Meadows' original direction (12 weakest → 1 strongest)
+- `LeverageAnalyzer` — `analyze_lever()`, `rank()`, `minimum_viable_set()`
+- `LeverageResult.leverage_score` — resolved violations dominate; binding-margin gain is capped at ±100 and weighted 10× lower, because the laws are pass/fail constraints, not a score to maximize
+
+**In `transition_pathways.py`:**
+- `TransitionStep` — step_id, domain, prerequisites, actor, time, `incumbent_resistance`, `Durability`, `unlocks_levers`
+- `TRANSITION_STEPS` — 14 governance/financial/verification/industrial steps
+- `Durability` — RATCHET (stays done), STICKY (erodes slowly), DECAYS (reverts without maintenance)
+- `TransitionPlanner` — `topological_order()`, `keystones()`, `critical_path()`, `stall_points()`, `decaying_foundations()`, `steps_to_unlock()`
+- Resistance and duration figures are stated judgments (`RESISTANCE_BASIS`). The dependency structure is the durable content
+
 **In `src/planetary_constants.py`:**
 - `SCHEMA_VERSION` — "1.0.0"
 - `ORBITAL` — regionalized orbital bands (leo_low, leo_high, meo, gto_geo) with thresholds, margins, uncertainty
@@ -248,8 +267,8 @@ Status is derived from margin percentage in `_status_from_margin()`:
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 61 tests across 14 test classes
-- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification
+- 79 tests across 16 test classes
+- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification, TestLeverageAnalysis, TestTransitionPathways
 - `TestConstantsUnification` is a drift guard, not a feature test: it fails if any module reintroduces its own copy of mineral production figures, or if a stored derived value (`ratio_current_to_ceiling`) diverges from its computed counterpart
 - No CI/CD pipeline configured
 - No linting or formatting tools configured

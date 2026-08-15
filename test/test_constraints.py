@@ -8,6 +8,7 @@ Copyright (c) 2026 Kavik
 import unittest
 import sys
 import os
+from copy import deepcopy
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.constraints import (
@@ -37,6 +38,17 @@ from src.planetary_constants import (
     space_export_ceiling_kg_yr,
 )
 from src.constants import MINERAL_DATA
+from leverage_analysis import (
+    LeverageAnalyzer,
+    STANDARD_LEVERS,
+    MEADOWS_LEVELS,
+)
+from transition_pathways import (
+    TransitionPlanner,
+    TransitionStep,
+    Domain,
+    Durability,
+)
 
 
 class TestWaterBudget(unittest.TestCase):
@@ -686,6 +698,168 @@ class TestConstantsUnification(unittest.TestCase):
         self.assertEqual(cobalt["current_production_kg_yr"], 290_000_000)
         self.assertTrue(cobalt.get("production_verified"))
         self.assertIn("USGS", cobalt.get("production_source", ""))
+
+
+class TestLeverageAnalysis(unittest.TestCase):
+    """leverage_analysis ranks modifications by conservation bought per effort."""
+
+    AGGRESSIVE = {
+        "name": "Orbital Data Center Phase 1",
+        "launches_per_year": 500,
+        "payload_mass_kg": 100_000,
+        "propellant_type": "methane_lox",
+        "orbital_mass_kg": 5_000_000,
+        "duration_years": 10,
+        "rare_earth_kg_per_year": 50_000,
+        "modules_per_year": 1,
+        "deorbit_plan": False,
+        "recycling_rate": 0.0,
+    }
+
+    def setUp(self):
+        self.analyzer = LeverageAnalyzer()
+        self.levers = {l.name: l for l in STANDARD_LEVERS}
+
+    def test_analysis_does_not_mutate_the_proposal(self):
+        """Levers must operate on copies — callers reuse their proposal dicts."""
+        original = dict(self.AGGRESSIVE)
+        self.analyzer.rank(self.AGGRESSIVE)
+        self.assertEqual(self.AGGRESSIVE, original)
+
+    def test_deorbit_commitment_resolves_law_3(self):
+        result = self.analyzer.analyze_lever(
+            self.AGGRESSIVE, self.levers["commit_deorbit_plan"])
+        resolved = [d.law_number for d in result.law_deltas if d.resolved]
+        self.assertIn(3, resolved)
+        self.assertEqual(result.violations_created, 0)
+
+    def test_partial_orbital_compliance_buys_nothing_on_law_5(self):
+        """Law 5 clamps unless deorbit plan AND removal AND bond are all set."""
+        bond_only = self.analyzer.analyze_lever(
+            self.AGGRESSIVE, self.levers["fund_deorbit_bond"])
+        self.assertEqual(bond_only.violations_resolved, 0)
+
+        full = self.analyzer.analyze_lever(
+            self.AGGRESSIVE, self.levers["full_orbital_compliance"])
+        resolved = [d.law_number for d in full.law_deltas if d.resolved]
+        self.assertIn(5, resolved)
+
+    def test_hydrogen_fixes_soot_but_not_the_water_budget(self):
+        """The counterintuitive result: hydrogen/LOX is not a water-budget fix.
+
+        Methane at 4.6e6 kg x 0.39 H2O fraction and hydrogen at 2.0e6 kg x 0.9
+        produce almost identical H2O per launch. Hydrogen removes black carbon
+        entirely, so it resolves Law 7 while leaving Law 1 essentially unmoved.
+        """
+        result = self.analyzer.analyze_lever(
+            self.AGGRESSIVE, self.levers["propellant_to_hydrogen"])
+        by_law = {d.law_number: d for d in result.law_deltas}
+        self.assertTrue(by_law[7].resolved)
+        self.assertFalse(by_law[1].resolved)
+        # Law 1 does not merely fail to improve — it gets marginally worse,
+        # by ~1.05 percentage points at 500 launches/year.
+        self.assertLess(by_law[1].delta, 0)
+        self.assertLess(abs(by_law[1].delta), 2.0)
+
+    def test_policy_switch_outranks_parameter_push(self):
+        """Meadows' claim, tested rather than asserted."""
+        ranked = self.analyzer.rank(self.AGGRESSIVE)
+        scores = {r.lever.name: r.leverage_score for r in ranked}
+        self.assertGreater(scores["commit_deorbit_plan"],
+                           scores["halve_launch_cadence"])
+
+    def test_ranking_is_sorted_descending(self):
+        ranked = self.analyzer.rank(self.AGGRESSIVE)
+        scores = [r.leverage_score for r in ranked]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    def test_minimum_viable_set_actually_clears_violations(self):
+        minimal = self.analyzer.minimum_viable_set(self.AGGRESSIVE)
+        self.assertIsNotNone(minimal)
+        proposal = deepcopy(self.AGGRESSIVE)
+        for lever in minimal:
+            lever.apply(proposal)
+        violated = [r for r in evaluate_all(proposal)
+                    if r.status == ConstraintStatus.VIOLATED]
+        self.assertEqual(violated, [])
+
+    def test_every_lever_has_a_known_meadows_rank(self):
+        for lever in STANDARD_LEVERS:
+            with self.subTest(lever=lever.name):
+                self.assertIn(lever.meadows_rank, MEADOWS_LEVELS)
+
+
+class TestTransitionPathways(unittest.TestCase):
+    """transition_pathways models the institutional steps that unlock levers."""
+
+    def setUp(self):
+        self.planner = TransitionPlanner()
+
+    def test_pathway_has_no_prerequisite_cycles(self):
+        order = self.planner.topological_order()
+        self.assertEqual(len(order), len(self.planner.steps))
+
+    def test_topological_order_respects_prerequisites(self):
+        seen = set()
+        for step in self.planner.topological_order():
+            for prereq in step.prerequisites:
+                self.assertIn(prereq, seen,
+                              f"{step.step_id} ordered before {prereq}")
+            seen.add(step.step_id)
+
+    def test_cycle_is_detected(self):
+        a = TransitionStep(step_id="a", name="A", domain=Domain.GOVERNANCE,
+                           description="", actor="", prerequisites=["b"])
+        b = TransitionStep(step_id="b", name="B", domain=Domain.GOVERNANCE,
+                           description="", actor="", prerequisites=["a"])
+        with self.assertRaises(ValueError):
+            TransitionPlanner([a, b])
+
+    def test_unknown_prerequisite_is_rejected(self):
+        orphan = TransitionStep(
+            step_id="orphan", name="Orphan", domain=Domain.GOVERNANCE,
+            description="", actor="", prerequisites=["does_not_exist"])
+        with self.assertRaises(ValueError):
+            TransitionPlanner([orphan])
+
+    def test_registry_is_the_top_keystone(self):
+        """Attribution is impossible without it, so everything routes through."""
+        top_step, unlocked = self.planner.keystones()[0]
+        self.assertEqual(top_step.step_id, "orbital_registry")
+        self.assertGreater(unlocked, 0)
+
+    def test_critical_path_starts_at_a_step_with_no_prerequisites(self):
+        chain, total = self.planner.critical_path()
+        self.assertEqual(chain[0].prerequisites, [])
+        self.assertGreater(total, 0)
+
+    def test_completion_time_exceeds_start_by_duration(self):
+        for step in self.planner.steps:
+            with self.subTest(step=step.step_id):
+                self.assertAlmostEqual(
+                    self.planner.completion_time(step.step_id)
+                    - self.planner.earliest_start(step.step_id),
+                    step.time_years)
+
+    def test_steps_to_unlock_includes_the_provider_and_its_prerequisites(self):
+        chain = self.planner.steps_to_unlock("commit_deorbit_plan")
+        self.assertIsNotNone(chain)
+        ids = [s.step_id for s in chain]
+        self.assertIn("orbital_registry", ids)
+        # Chain must be self-contained: every prerequisite present.
+        for step in chain:
+            for prereq in step.prerequisites:
+                self.assertIn(prereq, ids)
+
+    def test_unknown_lever_unlocks_nothing(self):
+        self.assertIsNone(self.planner.steps_to_unlock("no_such_lever"))
+
+    def test_decaying_foundations_are_load_bearing(self):
+        """A DECAYS step with dependents is a maintenance obligation."""
+        for step in self.planner.decaying_foundations():
+            with self.subTest(step=step.step_id):
+                self.assertEqual(step.durability, Durability.DECAYS)
+                self.assertGreater(len(self.planner.dependents(step.step_id)), 0)
 
 
 if __name__ == "__main__":
