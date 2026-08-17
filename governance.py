@@ -58,13 +58,18 @@ class GovernanceChecker:
             recommendations=recommendations
         )
 
-# Example usage:
-body = DecisionBody(leaders=1, wise_people=2, tie_breaker_available=False)
-checker = GovernanceChecker()
-assessment = checker.assess_decision_body(body)
+def _demo():
+    """Example usage: a single leader with two stewards and no tie-breaker."""
+    body = DecisionBody(leaders=1, wise_people=2, tie_breaker_available=False)
+    checker = GovernanceChecker()
+    assessment = checker.assess_decision_body(body)
 
-print("GOVERNANCE MINIMUM PATTERN MET:", assessment.passes_minimum)
-for issue in assessment.issues:
-    print("ISSUE:", issue)
-for rec in assessment.recommendations:
-    print("RECOMMENDATION:", rec)
+    print("GOVERNANCE MINIMUM PATTERN MET:", assessment.passes_minimum)
+    for issue in assessment.issues:
+        print("ISSUE:", issue)
+    for rec in assessment.recommendations:
+        print("RECOMMENDATION:", rec)
+
+
+if __name__ == "__main__":
+    _demo()

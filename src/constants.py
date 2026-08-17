@@ -10,6 +10,16 @@ from dataclasses import dataclass, field
 from typing import Optional
 from datetime import date
 
+from .planetary_constants import (
+    MINERALS,
+    MINERAL_KEY_ALIASES,
+    SPACE_EXPORT_THRESHOLD_FRACTION,
+    canonical_mineral_key,
+    conservation_ceiling_kg_yr,
+    production_kg_yr,
+    space_export_ceiling_kg_yr,
+)
+
 
 @dataclass
 class MeasuredValue:
@@ -139,49 +149,38 @@ STANDARD_MODULE = DataCenterModule()
 # MINERAL RESERVES AND PRODUCTION
 # ============================================================
 
+# Space-facing view of the mineral data. Production figures are NOT stored here
+# — they are derived from planetary_constants.MINERALS, which is the single
+# source of truth. This module keeps the older space-facing key names
+# ("rare_earths", "high_purity_copper") and adds the Law 6 allocation ceiling.
+#
+# `space_export_ceiling_kg_yr` replaces the former `annual_ceiling_kg`, which was
+# stored, never read, and named so generically that it was routinely confused
+# with the global conservation ceiling. It is derived on every build, so it
+# cannot drift from production. See legacy/README.md.
+
+_MINERAL_NOTES = {
+    "rare_earths": "Includes all REE. China dominates production ~60%",
+    "high_purity_copper": "Declining ore grades globally. Energy cost per kg rising",
+    "lithium": "Battery demand competing. Brine vs hard rock extraction",
+    "cobalt": "DRC dominance (~76% of mine production), ethical sourcing constraints",
+    "gallium": "Critical for semiconductors. China controls ~98% production",
+    "indium": "Solar panel demand competing",
+}
+
 MINERAL_DATA = {
-    "rare_earths": {
-        "global_production_kg_per_year": 350_000_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 35_000,
-        "source": "USGS Mineral Commodity Summaries 2025",
-        "notes": "Includes all REE. China dominates production ~60%"
-    },
-    "high_purity_copper": {
-        "global_production_kg_per_year": 22_000_000_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 2_200_000,
-        "source": "USGS 2025",
-        "notes": "Declining ore grades globally. Energy cost per kg rising"
-    },
-    "lithium": {
-        "global_production_kg_per_year": 180_000_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 18_000,
-        "source": "USGS 2025",
-        "notes": "Battery demand competing. Brine vs hard rock extraction"
-    },
-    "cobalt": {
-        "global_production_kg_per_year": 220_000_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 22_000,
-        "source": "USGS 2025",
-        "notes": "DRC dominance, ethical sourcing constraints"
-    },
-    "gallium": {
-        "global_production_kg_per_year": 500_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 50,
-        "source": "USGS 2025",
-        "notes": "Critical for semiconductors. China controls ~98% production"
-    },
-    "indium": {
-        "global_production_kg_per_year": 900_000,
-        "threshold_fraction": 0.0001,
-        "annual_ceiling_kg": 90,
-        "source": "USGS 2025",
-        "notes": "Solar panel demand competing"
+    legacy_key: {
+        "global_production_kg_per_year": production_kg_yr(legacy_key),
+        "threshold_fraction": SPACE_EXPORT_THRESHOLD_FRACTION,
+        "space_export_ceiling_kg_yr": space_export_ceiling_kg_yr(legacy_key),
+        "conservation_ceiling_kg_yr": conservation_ceiling_kg_yr(legacy_key),
+        "canonical_key": canonical_mineral_key(legacy_key),
+        "source": MINERALS[canonical_mineral_key(legacy_key)].get(
+            "production_source", "USGS Mineral Commodity Summaries 2025"
+        ),
+        "notes": _MINERAL_NOTES[legacy_key],
     }
+    for legacy_key in MINERAL_KEY_ALIASES
 }
 
 # ============================================================

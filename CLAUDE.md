@@ -23,27 +23,53 @@ src/                        # Core framework (importable package)
                             #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
-  test_constraints.py       # 27 unit tests (unittest) — no __init__.py
+  test_constraints.py       # 79 unit tests (unittest) — no __init__.py
 
 data/
   current_state.json        # Current constraint margins (last updated 2026-02-27)
   scenarios.json            # 4 pre-defined scenarios
 
 examples/
-  check_proposal.py         # Usage demos (has syntax error on line 158 — cannot run via -m)
+  check_proposal.py         # Six runnable demos — python -m examples.check_proposal
 
-atomic_accounting.py        # AtomicAccountant, Element registry, depletion analysis (root)
-governance.py               # GovernanceChecker, DecisionBody (root; runs example at import)
-power_dynamics.py           # PowerOrientation, AI directives, check_governance_risk() (root)
+tools/
+  fix_paste_corruption.py   # Repairs the 7-symptom markdown-paste corruption pattern
 
+legacy/                     # Superseded files + falsification ledger (see legacy/README.md)
+  README.md                 # The precedence record — what was claimed, what falsified it
+  Possible-addons.md        # Review notes, all items landed in src/planetary_constants.py
+
+# Standalone modules (repo root) — each runs independently, stdlib only
+leverage_analysis.py                      # Ranks proposal modifications by conservation bought per effort
+transition_pathways.py                    # Governance/financial steps that make those levers reachable
+atomic_accounting.py                      # AtomicAccountant, Element registry, depletion analysis
+governance.py                             # GovernanceChecker, DecisionBody — decision-body composition
+power_dynamics.py                         # PowerOrientation, AI directives, check_governance_risk()
+constraint_accountability_chain.py        # Schema/spec for the decision-ancestry genome
+constraint_accountability_engine.py       # DecisionNode, AccountabilityChain — implements the schema
+buffer_sensor_corruption.py               # How incentives corrupt institutional sensor networks
+consequence_velocity.py                   # Consequences as processes with velocity and acceleration
+dollar_energy_metabolism.py               # Recursive energy-cost model of financial system overhead
+innovation_regression_audit.py            # Free-settler vs. extraction productivity comparison
+process_epistemology.py                   # State-based vs. process-based knowledge models
+slavery_system_audit.py                   # Triple audit: DMAIC, scientific method, thermodynamics
+ocean_timber_sequestration_audit.py       # Six-layer carbon audit of wood-in-ocean sequestration
+stratospheric_aerosol_injection_audit.py  # Six-layer thermodynamic audit of SAI
+
+METHOD.md                   # The hypothesize → run → falsify → edit → rerun loop; legacy rules
+RELATED.md                  # Relationship to JinnZ2/earth-systems-physics; shared-file sync rules
 CONSTRAINT_ANALYSIS.md      # Detailed constraint analysis documentation
 POWER_DYNAMICS.md           # Power dynamics and governance analysis
-Possible-addons.md          # Proposed future additions and extensions
 ```
+
+Seven root modules are kept in sync with the sibling repo
+[`earth-systems-physics`](https://github.com/JinnZ2/earth-systems-physics).
+Read `RELATED.md` before editing any of them — three carry deliberate
+stdlib-swap divergences from their canonical versions.
 
 ## Commands
 
-### Run all tests (32 tests)
+### Run all tests (79 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -53,10 +79,19 @@ python -m unittest discover -s test -p "test_*.py"
 python -m unittest discover -s test -p "test_constraints.py"
 ```
 
+### Run the examples
+```bash
+python -m examples.check_proposal  # Six demos: two proposals, scenarios, cascade, loops, sites
+```
+
 ### Run standalone modules
 ```bash
-python atomic_accounting.py       # Element depletion analysis with 3 scenarios
-python power_dynamics.py          # AI governance directives + risk check demo
+python atomic_accounting.py                      # Element depletion analysis with 3 scenarios
+python power_dynamics.py                         # AI governance directives + risk check demo
+python leverage_analysis.py                      # Rank modifications for two example proposals
+python transition_pathways.py                    # Keystones, critical path, stall points
+python governance.py                             # Decision-body composition check
+python constraint_accountability_engine.py       # Manufacturing-floor decision genome demo
 ```
 
 ### Use the core API directly
@@ -69,7 +104,21 @@ result.print_report()
 
 All commands must be run from the repository root.
 
-**Known issue:** `examples/check_proposal.py` has a syntax error (unterminated string at line 158) and cannot be executed via `python -m examples.check_proposal`.
+## Working Method
+
+Read `METHOD.md` before changing published claims. In short:
+
+- **Every published output is a claim.** README snippets, docstring examples,
+  and margin figures are hypotheses, not decoration. Run them and paste what
+  they printed — not what they should print.
+- **Falsified claims get corrected in place, with the original quoted in
+  `legacy/README.md`.** Silent fixes destroy the evidence that a check happened.
+- **A wrong published number is a symptom.** Search for the cause before editing
+  the sentence. The README's Law 6 error was the visible end of a documented
+  input field that no code read.
+- **Superseded files move to `legacy/`, never deleted.** Precedence carries.
+  The bar for moving a file is in `METHOD.md` — you must be able to name what
+  replaced it, confirm nothing imports it, and write its ledger entry.
 
 ## Architecture
 
@@ -140,11 +189,26 @@ Optional fields:
 **In `src/constants.py`:**
 - `MeasuredValue` — value with unit, source, measured_date, uncertainty_pct
 - `DataCenterModule` — mass budget for a ~10MW space data center module
-- `MINERAL_DATA` — dict with production rates, thresholds, and ceilings for 6 critical minerals
+- `MINERAL_DATA` — space-facing view of 6 critical minerals, **derived** from `planetary_constants.MINERALS` at import. Keys: `global_production_kg_per_year`, `threshold_fraction`, `space_export_ceiling_kg_yr`, `conservation_ceiling_kg_yr`, `canonical_key`, `source`, `notes`. Stores no production figures of its own
 
 **In `src/materials.py`:**
 - `MaterialEntry` — material, mass_kg, origin, destination, energy/CO2 costs
 - `MaterialLedger` — `record()`, `check_against_ceiling()`, `energy_audit()`, `export_json()`, `export_csv()`
+
+**In `leverage_analysis.py`:**
+- `Lever` — a candidate modification: `apply` callable, `EffortClass`, Meadows rank, notes
+- `STANDARD_LEVERS` — 12 levers spanning policy switches, operational changes, capital, and technology
+- `EFFORT_WEIGHTS` — ordinal difficulty weights. **A policy choice, not derived** (`EFFORT_WEIGHT_BASIS`)
+- `MEADOWS_LEVELS` — the leverage ladder in Meadows' original direction (12 weakest → 1 strongest)
+- `LeverageAnalyzer` — `analyze_lever()`, `rank()`, `minimum_viable_set()`
+- `LeverageResult.leverage_score` — resolved violations dominate; binding-margin gain is capped at ±100 and weighted 10× lower, because the laws are pass/fail constraints, not a score to maximize
+
+**In `transition_pathways.py`:**
+- `TransitionStep` — step_id, domain, prerequisites, actor, time, `incumbent_resistance`, `Durability`, `unlocks_levers`
+- `TRANSITION_STEPS` — 14 governance/financial/verification/industrial steps
+- `Durability` — RATCHET (stays done), STICKY (erodes slowly), DECAYS (reverts without maintenance)
+- `TransitionPlanner` — `topological_order()`, `keystones()`, `critical_path()`, `stall_points()`, `decaying_foundations()`, `steps_to_unlock()`
+- Resistance and duration figures are stated judgments (`RESISTANCE_BASIS`). The dependency structure is the durable content
 
 **In `src/planetary_constants.py`:**
 - `SCHEMA_VERSION` — "1.0.0"
@@ -152,7 +216,10 @@ Optional fields:
 - `ATMOSPHERIC` — sub-constraints for black carbon, alumina, mesospheric water vapor
 - `HYDROGEN_ESCAPE` — policy-choice caps with directional risk framing
 - `GEODYNAMO` — directional risk indicator (not a hard limit)
-- `MINERALS` — 10 minerals (rare_earth_aggregate, copper, cobalt, indium, gallium, tantalum, lithium, silicon_refined, aluminum) with production/threshold data
+- `MINERALS` — 9 minerals (rare_earth_aggregate, copper, cobalt, indium, gallium, tantalum, lithium, silicon_refined, aluminum). **The single source of truth for `current_production_kg_yr`** — no other module may store these figures
+- `SPACE_EXPORT_THRESHOLD_FRACTION` — 0.0001. Law 6's allocation rule: the share of current production a space program may draw
+- `MINERAL_KEY_ALIASES` — legacy space-facing keys (`rare_earths`, `high_purity_copper`) → canonical keys (`rare_earth_aggregate`, `copper`)
+- `canonical_mineral_key()`, `production_kg_yr()`, `conservation_ceiling_kg_yr()`, `space_export_ceiling_kg_yr()`, `overshoot_ratio()` — accessors that resolve either naming. Ceilings and ratios are **derived on every call, never stored**
 - `LAUNCH` — max realistic cadence, historical data, pad constraints
 - `ENERGY` — thermodynamic minimums, delta-v requirements, meteoritic influx
 - `compute_margins()` — calculates current margins across all constraint categories
@@ -191,15 +258,18 @@ Status is derived from margin percentage in `_status_from_margin()`:
 - **Power dynamics as constraint** — models how decision-maker psychology undermines governance
 
 ### Important Caveats
-- `governance.py` executes example code at module level (not guarded by `if __name__ == "__main__"`); importing it triggers print output
-- Law 4 (Geodynamo) has no implementation class — it appears in the law numbering but is enforced through Laws 1-3
+- Law 4 (Geodynamo) has no implementation class — it appears in the law numbering but is enforced through Laws 1-3. `check_proposal()` therefore evaluates **six** laws, not seven; any output claiming "N of 7" is wrong
 - The `constraint_checks.jsonl` log file is written to cwd; add to `.gitignore` (already done)
+- **`src/planetary_constants.py` is the single source of truth for mineral production figures.** `constants.py` and `constraints.py` derive from it and must never store their own copies — three copies previously disagreed on cobalt. `TestConstantsUnification` fails if a copy reappears (resolved 2026-08-14; see `legacy/README.md`)
+- **Two ceilings, two questions — do not conflate them.** `space_export_ceiling_kg_yr` is Law 6's allocation rule (a fixed 0.01% fraction of *current production*, `SPACE_EXPORT_THRESHOLD_FRACTION`). `conservation_ceiling_kg_yr` is the reserve-horizon limit on *all* human use. They are numerically unrelated. The old name `annual_ceiling_kg` was stored, read by nothing, and generic enough that the same "35,000" appeared to mean both
+- Adding a documented field to the proposal schema is not enough — it must be **read** by the relevant constraint class. `rare_earth_kg_per_year` was documented in three places and read by none for the life of the field (fixed 2026-08-14; see `legacy/README.md`). Per-mineral shortcut fields are registered in `CrustalMaterialThroughput.DECLARED_MINERAL_FIELDS`
 
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 32 tests across 10 test classes
-- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker
+- 79 tests across 16 test classes
+- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification, TestLeverageAnalysis, TestTransitionPathways
+- `TestConstantsUnification` is a drift guard, not a feature test: it fails if any module reintroduces its own copy of mineral production figures, or if a stored derived value (`ratio_current_to_ceiling`) diverges from its computed counterpart
 - No CI/CD pipeline configured
 - No linting or formatting tools configured
 - No pre-commit hooks active

@@ -14,6 +14,12 @@ from enum import Enum
 from datetime import datetime
 import json
 
+from .planetary_constants import (
+    MINERAL_KEY_ALIASES,
+    SPACE_EXPORT_THRESHOLD_FRACTION,
+    production_kg_yr,
+)
+
 
 class ConstraintStatus(Enum):
     SAFE = "SAFE"
@@ -372,7 +378,7 @@ class CrustalMaterialThroughput:
     LAW_NUMBER = 6
     NAME = "Crustal Material Throughput"
 
-    THRESHOLD_FRACTION = 0.0001
+    THRESHOLD_FRACTION = SPACE_EXPORT_THRESHOLD_FRACTION
 
     DEFAULT_MATERIAL_PER_MODULE = {
         "rare_earths": (5_000, 10_000),
@@ -383,13 +389,18 @@ class CrustalMaterialThroughput:
         "indium": (2, 8),
     }
 
+    # Derived from planetary_constants.MINERALS — the single source of truth.
+    # This module previously kept its own copy, which silently disagreed with
+    # planetary_constants on cobalt. See legacy/README.md.
     GLOBAL_PRODUCTION = {
-        "rare_earths": 350_000_000,
-        "high_purity_copper": 22_000_000_000,
-        "lithium": 180_000_000,
-        "cobalt": 220_000_000,
-        "gallium": 500_000,
-        "indium": 900_000,
+        legacy_key: production_kg_yr(legacy_key)
+        for legacy_key in MINERAL_KEY_ALIASES
+    }
+
+    # Convenience fields on the proposal dict that declare annual demand for a
+    # single mineral directly, without building a material_requirements_kg map.
+    DECLARED_MINERAL_FIELDS = {
+        "rare_earths": "rare_earth_kg_per_year",
     }
 
     def evaluate(self, proposal: dict) -> ConstraintResult:
@@ -400,16 +411,25 @@ class CrustalMaterialThroughput:
         violations = []
         tightest_margin_pct = 100.0
         tightest_mineral = "none"
+        tightest_demand = 0.0
+        tightest_ceiling = 0.0
 
         for mineral, production in self.GLOBAL_PRODUCTION.items():
             ceiling = production * self.THRESHOLD_FRACTION
 
+            # Most specific declaration wins:
+            # material_requirements_kg > shortcut field > module-derived default.
+            shortcut_field = self.DECLARED_MINERAL_FIELDS.get(mineral)
             if mineral in custom_materials:
-                annual_demand = custom_materials[mineral] * (1 - recycling_rate)
+                raw_demand = custom_materials[mineral]
+            elif shortcut_field is not None and proposal.get(shortcut_field) is not None:
+                raw_demand = proposal[shortcut_field]
             else:
                 default_range = self.DEFAULT_MATERIAL_PER_MODULE.get(mineral, (0, 0))
                 per_module = (default_range[0] + default_range[1]) / 2
-                annual_demand = per_module * modules_per_year * (1 - recycling_rate)
+                raw_demand = per_module * modules_per_year
+
+            annual_demand = raw_demand * (1 - recycling_rate)
 
             if ceiling > 0:
                 margin_pct = ((ceiling - annual_demand) / ceiling) * 100
@@ -419,6 +439,8 @@ class CrustalMaterialThroughput:
             if margin_pct < tightest_margin_pct:
                 tightest_margin_pct = margin_pct
                 tightest_mineral = mineral
+                tightest_demand = annual_demand
+                tightest_ceiling = ceiling
 
             if margin_pct <= 0:
                 violations.append(
@@ -432,9 +454,9 @@ class CrustalMaterialThroughput:
             status=_status_from_margin(tightest_margin_pct),
             margin_remaining_pct=tightest_margin_pct,
             time_to_binding_years=None,
-            current_value=0,
-            ceiling_value=0,
-            unit="multiple minerals",
+            current_value=tightest_demand,
+            ceiling_value=tightest_ceiling,
+            unit=f"kg/year ({tightest_mineral})",
             mechanism=f"Tightest mineral: {tightest_mineral}. "
                       f"Recycling rate: {recycling_rate*100:.0f}%",
             cascade_triggers=["supply chain disruption", "price escalation",

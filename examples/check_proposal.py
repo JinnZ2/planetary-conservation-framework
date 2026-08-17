@@ -155,4 +155,45 @@ def show_cascade():
 def show_feedback_loops():
     """Identify all positive feedback loops in the system."""
     print("\n" + "="*70)
-    print("FEEDBACK LOOP IDENTIFICATION​​​​​​​​​​​​​​​​
+    print("FEEDBACK LOOP IDENTIFICATION")
+    print("="*70)
+
+    engine = CascadeEngine()
+    loops = engine.find_feedback_loops()
+
+    if not loops:
+        print("\n  No closed feedback loops found in the coupling matrix.")
+        return loops
+
+    print(f"\n  Positive feedback loops found: {len(loops)}")
+    for i, loop in enumerate(loops):
+        chain = " → ".join([loop["origin"]] + loop["path"])
+        print(f"\n  [{i+1}] {chain}")
+        print(f"      Total timescale: {loop['total_timescale']:.1f} yr")
+        for mechanism in loop["mechanism_chain"]:
+            print(f"        → {mechanism[:80]}")
+
+    return loops
+
+
+def show_launch_sites():
+    """Compare the four modelled launch sites."""
+    print("\n" + "="*70)
+    print("LAUNCH SITE COMPARISON")
+    print("="*70)
+
+    print_site_comparison()
+
+
+def main():
+    """Run every demo in order."""
+    check_orbital_datacenter()
+    check_compliant_proposal()
+    run_scenario_comparison()
+    show_cascade()
+    show_feedback_loops()
+    show_launch_sites()
+
+
+if __name__ == "__main__":
+    main()
