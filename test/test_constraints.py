@@ -36,7 +36,14 @@ from src.planetary_constants import (
     overshoot_ratio,
     production_kg_yr,
     space_export_ceiling_kg_yr,
+    CLIMATE_2025,
+    co2_ppm,
+    co2_pct_of_preindustrial,
+    sea_level_rise_mm_yr_total,
+    unverified_indicators,
 )
+from src.locations import ALL_SITES, GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR
+from stratospheric_aerosol_injection_audit import CONSTANTS as SAI_CONSTANTS
 from src.constants import MINERAL_DATA
 from leverage_analysis import (
     LeverageAnalyzer,
@@ -698,6 +705,111 @@ class TestConstantsUnification(unittest.TestCase):
         self.assertEqual(cobalt["current_production_kg_yr"], 290_000_000)
         self.assertTrue(cobalt.get("production_verified"))
         self.assertIn("USGS", cobalt.get("production_source", ""))
+
+
+class TestClimate2025(unittest.TestCase):
+    """CLIMATE_2025 is the single source for observed climate indicators.
+
+    Regression guard: CO2 was stored in two places (planetary_constants and
+    stratospheric_aerosol_injection_audit) before this block existed. Mineral
+    production figures already taught this repo what duplicate constants cost.
+    """
+
+    def test_eei_co2_derives_from_climate_block(self):
+        self.assertEqual(EARTH_ENERGY_IMBALANCE["co2_ppm"], co2_ppm())
+        self.assertEqual(
+            EARTH_ENERGY_IMBALANCE["co2_ppm_uncertainty"],
+            CLIMATE_2025["greenhouse_gases"]["co2_ppm_uncertainty"])
+
+    def test_sai_audit_co2_matches_canonical(self):
+        """The SAI audit keeps a deliberate mirror so it stays dependency-free.
+
+        A mirror is acceptable only while something checks it. This is that
+        something — if it fails, update stratospheric_aerosol_injection_audit
+        CONSTANTS["current_co2_ppm"] to match CLIMATE_2025.
+        """
+        self.assertEqual(SAI_CONSTANTS["current_co2_ppm"], co2_ppm())
+
+    def test_co2_percentage_is_derived_not_stored(self):
+        gh = CLIMATE_2025["greenhouse_gases"]
+        expected = gh["co2_ppm"] / gh["co2_preindustrial_ppm"] * 100.0
+        self.assertAlmostEqual(co2_pct_of_preindustrial(), expected)
+        self.assertAlmostEqual(
+            EARTH_ENERGY_IMBALANCE["co2_pct_of_preindustrial"], expected)
+
+    def test_co2_matches_reported_53_percent_increase(self):
+        """BAMS reports 425.6 ppm as a 53% increase over ~278 ppm."""
+        increase = co2_pct_of_preindustrial() - 100.0
+        self.assertAlmostEqual(increase, 53.0, delta=0.5)
+
+    def test_sea_level_total_is_sum_of_components(self):
+        ocean = CLIMATE_2025["ocean"]
+        self.assertAlmostEqual(
+            sea_level_rise_mm_yr_total(),
+            ocean["slr_thermal_expansion_mm_yr_since_2005"]
+            + ocean["slr_ice_melt_mm_yr_since_2005"])
+
+    def test_locations_derives_global_slr(self):
+        self.assertEqual(GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR,
+                         sea_level_rise_mm_yr_total())
+
+    def test_unverified_indicators_are_reported_not_hidden(self):
+        """Figures that could not be confirmed must stay queryable."""
+        unverified = unverified_indicators()
+        self.assertIn("cryosphere", unverified)
+        self.assertIn("tropical_cyclones", unverified)
+        self.assertIn("greenhouse_gases.ch4", unverified)
+        self.assertIn("greenhouse_gases.n2o", unverified)
+        # CO2 and sea level WERE confirmed and must not appear.
+        self.assertNotIn("greenhouse_gases.co2", unverified)
+        self.assertNotIn("ocean.sea_level", unverified)
+
+    def test_current_state_json_matches_canonical(self):
+        """The published data file is a claim too.
+
+        README tells AI systems to load data/current_state.json. No Python
+        reads it, so nothing else would catch it drifting from the code.
+        """
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data", "current_state.json")
+        with open(path) as f:
+            state = json.load(f)
+
+        observed = state["observed_climate_2025"]
+        ocean = CLIMATE_2025["ocean"]
+        self.assertEqual(observed["co2_ppm"], co2_ppm())
+        self.assertEqual(state["earth_energy_imbalance"]["co2_ppm"], co2_ppm())
+        self.assertEqual(
+            observed["sea_level_mm_above_1993_baseline"],
+            ocean["sea_level_mm_above_1993_baseline"])
+        self.assertAlmostEqual(
+            observed["sea_level_rise_mm_per_yr_since_2005"],
+            sea_level_rise_mm_yr_total())
+        self.assertAlmostEqual(
+            state["earth_energy_imbalance"]["co2_pct_of_preindustrial"],
+            co2_pct_of_preindustrial(), places=1)
+        self.assertEqual(sorted(observed["unverified"]),
+                         sorted(unverified_indicators()))
+
+    def test_every_site_slr_carries_a_source_string(self):
+        for site in ALL_SITES:
+            with self.subTest(site=site.name):
+                self.assertTrue(site.sea_level_rise_source.strip(),
+                                "site SLR figure has no attribution")
+
+    def test_site_slr_rates_are_plausible_against_global(self):
+        """Local rates vary regionally, but not by an order of magnitude."""
+        for site in ALL_SITES:
+            with self.subTest(site=site.name):
+                self.assertGreater(site.slr_vs_global(), 0.25)
+                self.assertLess(site.slr_vs_global(), 4.0)
+
+    def test_elevation_headroom_orders_sites_by_exposure(self):
+        boca = next(s for s in ALL_SITES if "Starbase" in s.name)
+        vandenberg = next(s for s in ALL_SITES if "Vandenberg" in s.name)
+        self.assertLess(boca.elevation_headroom_years(),
+                        vandenberg.elevation_headroom_years())
 
 
 class TestLeverageAnalysis(unittest.TestCase):

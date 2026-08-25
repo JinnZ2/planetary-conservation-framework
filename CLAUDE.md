@@ -23,7 +23,7 @@ src/                        # Core framework (importable package)
                             #   constants with uncertainty, compute_margins(), print_summary()
 
 test/
-  test_constraints.py       # 79 unit tests (unittest) — no __init__.py
+  test_constraints.py       # 90 unit tests (unittest) — no __init__.py
 
 data/
   current_state.json        # Current constraint margins (last updated 2026-02-27)
@@ -69,7 +69,7 @@ stdlib-swap divergences from their canonical versions.
 
 ## Commands
 
-### Run all tests (79 tests)
+### Run all tests (90 tests)
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
@@ -211,7 +211,7 @@ Optional fields:
 - Resistance and duration figures are stated judgments (`RESISTANCE_BASIS`). The dependency structure is the durable content
 
 **In `src/planetary_constants.py`:**
-- `SCHEMA_VERSION` — "1.0.0"
+- `SCHEMA_VERSION` — "1.1.0" (CLIMATE_2025 added)
 - `ORBITAL` — regionalized orbital bands (leo_low, leo_high, meo, gto_geo) with thresholds, margins, uncertainty
 - `ATMOSPHERIC` — sub-constraints for black carbon, alumina, mesospheric water vapor
 - `HYDROGEN_ESCAPE` — policy-choice caps with directional risk framing
@@ -222,6 +222,8 @@ Optional fields:
 - `canonical_mineral_key()`, `production_kg_yr()`, `conservation_ceiling_kg_yr()`, `space_export_ceiling_kg_yr()`, `overshoot_ratio()` — accessors that resolve either naming. Ceilings and ratios are **derived on every call, never stored**
 - `LAUNCH` — max realistic cadence, historical data, pad constraints
 - `ENERGY` — thermodynamic minimums, delta-v requirements, meteoritic influx
+- `CLIMATE_2025` — observed climate state from BAMS *State of the Climate in 2025* (36th annual, published Aug 2026). **The single source of truth for CO2 and sea level.** Every indicator carries a `*_verified` flag; `unverified_indicators()` lists what was not confirmable
+- `co2_ppm()`, `co2_pct_of_preindustrial()`, `sea_level_rise_mm_yr_total()` — accessors. Percentages and totals are derived on every call, never stored
 - `compute_margins()` — calculates current margins across all constraint categories
 - `print_summary()` — formatted output of all planetary constants
 
@@ -267,8 +269,8 @@ Status is derived from margin percentage in `_status_from_margin()`:
 ## Testing
 
 - Framework: Python `unittest` (pytest is not installed)
-- 79 tests across 16 test classes
-- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification, TestLeverageAnalysis, TestTransitionPathways
+- 90 tests across 17 test classes
+- Test classes: TestWaterBudget, TestAtmosphericComposition, TestAngularMomentum, TestOrbitalCommons, TestMinerals, TestThermosphericBalance, TestEvaluateAll, TestCascadeEngine, TestMaterialLedger, TestConstraintChecker, TestEarthEnergyImbalance, TestThermosphericBalanceEEIContext, TestCascadeEngineClimateLink, TestConstantsUnification, TestClimate2025, TestLeverageAnalysis, TestTransitionPathways
 - `TestConstantsUnification` is a drift guard, not a feature test: it fails if any module reintroduces its own copy of mineral production figures, or if a stored derived value (`ratio_current_to_ceiling`) diverges from its computed counterpart
 - No CI/CD pipeline configured
 - No linting or formatting tools configured

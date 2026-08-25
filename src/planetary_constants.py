@@ -19,7 +19,9 @@ Author: Kavik + Claude
 Repository: https://github.com/JinnZ2/planetary-conservation-framework
 """
 
-SCHEMA_VERSION = "1.0.0"
+from typing import List
+
+SCHEMA_VERSION = "1.1.0"
 
 # =============================================================================
 # ORBITAL ENVIRONMENT - Regionalized by altitude band
@@ -477,6 +479,174 @@ ENERGY = {
 
 
 # =============================================================================
+# OBSERVED CLIMATE STATE — BAMS State of the Climate in 2025
+# =============================================================================
+#
+# The 36th annual State of the Climate report, American Meteorological Society,
+# published August 2026 as a supplement to the Bulletin of the AMS (Vol. 107,
+# No. 8). 625 scientists, 60 countries. Covers calendar year 2025.
+#
+# THIS IS THE SINGLE SOURCE OF TRUTH for observed climate indicators.
+# EARTH_ENERGY_IMBALANCE below derives its CO2 figure from here rather than
+# storing its own. Do not add a second copy anywhere — CO2 was already stored
+# in two places before this block existed, and mineral production figures
+# taught this repo what that costs (legacy/README.md, entry 3).
+#
+# VERIFICATION STATUS
+# -------------------
+# Every indicator carries a `*_verified` flag. True means the figure was
+# checked against a retrievable source on the date below. False means it came
+# from a secondary summary and has NOT been confirmed — it is carried because
+# omitting data is also a choice, but it must not be cited as established.
+#
+# The AMS primary sources (ametsoc.org, journals.ametsoc.org, ametsoc.net) were
+# unreachable from this environment (egress-blocked), so verification rests on
+# independent secondary retrievals. The cryosphere and tropical-cyclone figures
+# could not be confirmed at all and are flagged accordingly.
+
+CLIMATE_2025 = {
+    "reporting_year": 2025,
+    "report": "State of the Climate in 2025 (36th annual)",
+    "publisher": "American Meteorological Society",
+    "published": "2026-08",
+    "citation": "Bull. Amer. Meteor. Soc. Vol. 107, No. 8 (supplement)",
+    "contributors": "625 scientists, 60 countries",
+    "verified_on": "2026-08-25",
+    "verification_method": (
+        "Secondary retrieval; AMS primary domains egress-blocked from this "
+        "environment. Re-check against the published supplement when reachable."
+    ),
+
+    # ----- Greenhouse gases: all three at record highs in 2025 -----
+    "greenhouse_gases": {
+        "co2_ppm": 425.6,
+        "co2_ppm_uncertainty": 0.1,
+        "co2_preindustrial_ppm": 278.0,
+        "co2_verified": True,
+
+        "ch4_ppb": 1935.7,
+        "ch4_pct_above_preindustrial": 166,
+        "ch4_verified": False,       # record-high status confirmed; value not
+
+        "n2o_ppb": 338.9,
+        "n2o_pct_above_preindustrial": 26,
+        "n2o_verified": False,       # record-high status confirmed; value not
+
+        "fossil_fuel_c_pg_per_yr": 10.3,
+        "fossil_fuel_c_uncertainty_pg": 0.5,
+        "fossil_fuel_c_verified": True,
+        "fossil_fuel_notes": "Record high; >3x the 1960s rate.",
+    },
+
+    # ----- Ocean: heat content, sea level, marine heatwaves -----
+    "ocean": {
+        "ohc_0_2000m_record_high": True,
+        "ohc_verified": True,
+        "ohc_share_of_excess_heat_50yr": 0.90,
+
+        "sea_level_mm_above_1993_baseline": 111.2,
+        "sea_level_consecutive_record_years": 14,
+        "sea_level_verified": True,
+
+        # Components since 2005. These sum to the observed rate; the total is
+        # DERIVED (sea_level_rise_mm_yr_total), never stored.
+        "slr_thermal_expansion_mm_yr_since_2005": 1.6,
+        "slr_thermal_expansion_uncertainty": 0.3,
+        "slr_ice_melt_mm_yr_since_2005": 2.0,
+        "slr_ice_melt_uncertainty": 0.4,
+        "slr_components_verified": True,
+
+        "marine_heatwave_surface_fraction": 0.87,
+        "marine_heatwave_verified": True,
+        "sst_rank_in_172yr_record": 3,
+        "sst_verified": False,
+    },
+
+    # ----- Temperature -----
+    "temperature": {
+        "global_rank": "2nd or 3rd warmest on record",
+        "warmest_without_el_nino": True,
+        "enso_state": "near-neutral / weak La Nina-like",
+        "hottest_11yr_window": "2015-2025",
+        "rank_verified": True,
+        "el_nino_claim_verified": True,
+        "notes": (
+            "The absence of an El Nino boost is the load-bearing fact. The "
+            "2023-2024 records were partly ENSO-driven and could be discounted "
+            "as such; a record set under neutral-to-La Nina conditions cannot."
+        ),
+    },
+
+    # ----- Cryosphere — NOT VERIFIED against a retrievable source -----
+    "cryosphere": {
+        "arctic_rank_in_126yr_record": 2,
+        "arctic_warming_multiple_of_global": 3,
+        "arctic_max_sea_ice_extent_rank": "lowest in 47-year satellite record",
+        "arctic_min_sea_ice_extent_rank": 11,
+        "multiyear_ice_gt_4yr_km2_sept": 95_000,
+        "multiyear_ice_gt_4yr_km2_1980s": 1_500_000,
+        "antarctic_warmest_since": 1979,
+        "glacier_consecutive_loss_years": 38,
+        "glacier_loss_m_water_equiv_4th_yr": 1.0,
+        "glacier_share_of_loss_since_1976_in_last_decade": 0.41,
+        "verified": False,
+    },
+
+    # ----- Tropical cyclones — NOT VERIFIED against a retrievable source -----
+    "tropical_cyclones": {
+        "named_storms": 97,
+        "named_storms_1991_2020_average": 87,
+        "category_5_count": 5,
+        "category_5_north_atlantic": 3,
+        "strongest_atlantic_mph": 190,
+        "strongest_atlantic_hpa": 892,
+        "verified": False,
+        "notes": (
+            "Relevant to launch-site risk in src/locations.py: Boca Chica and "
+            "KSC both list hurricane shutdown as a primary failure mode."
+        ),
+    },
+}
+
+
+def co2_ppm() -> float:
+    """Observed global mean CO2 for the reporting year. Single source."""
+    return CLIMATE_2025["greenhouse_gases"]["co2_ppm"]
+
+
+def co2_pct_of_preindustrial() -> float:
+    """Derived, never stored — a stored ratio drifts from its own inputs."""
+    gh = CLIMATE_2025["greenhouse_gases"]
+    return gh["co2_ppm"] / gh["co2_preindustrial_ppm"] * 100.0
+
+
+def sea_level_rise_mm_yr_total() -> float:
+    """Total observed rate since 2005 = thermal expansion + land ice melt."""
+    o = CLIMATE_2025["ocean"]
+    return (o["slr_thermal_expansion_mm_yr_since_2005"]
+            + o["slr_ice_melt_mm_yr_since_2005"])
+
+
+def unverified_indicators() -> List[str]:
+    """Indicators carried but not confirmed against a retrievable source.
+
+    Exists so the gap is queryable rather than buried in a comment. Anything
+    listed here must not be cited as established. See METHOD.md.
+    """
+    out: List[str] = []
+    for group, payload in CLIMATE_2025.items():
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("verified") is False:
+            out.append(group)
+            continue
+        for key, value in payload.items():
+            if key.endswith("_verified") and value is False:
+                out.append(f"{group}.{key[:-9]}")
+    return sorted(out)
+
+
+# =============================================================================
 # EARTH ENERGY IMBALANCE (EEI) — WMO State of the Global Climate 2025
 # =============================================================================
 #
@@ -494,7 +664,9 @@ ENERGY = {
 #     approximately 18x total annual human primary energy use.
 #   • ~91% of excess energy is absorbed by the oceans, ~5% by land,
 #     ~3% by ice sheets/glaciers/sea ice, ~1% heats the atmosphere.
-#   • CO2 reached 423.9 ± 0.2 ppm (152% of pre-industrial).
+#   • CO2 reached 425.6 ± 0.1 ppm (153% of pre-industrial, i.e. +53%).
+#     Superseded the earlier WMO figure of 423.9 ppm — see CLIMATE_2025,
+#     which is now the single source for this value.
 #   • 2015-2025 were the hottest 11 years on record; 2025 was at
 #     ~1.43 °C above the 1850-1900 baseline.
 #   • Sea level rise accelerated from 2.65 mm/yr (1993-2011) to
@@ -558,11 +730,16 @@ EARTH_ENERGY_IMBALANCE = {
     "seconds_per_year": 3.156e7,
     "joules_per_zj": 1e21,
 
-    # ----- Companion climate indicators (WMO 2025) -----
-    "co2_ppm": 423.9,
-    "co2_ppm_uncertainty": 0.2,
-    "co2_pct_of_preindustrial": 152,
-    "temperature_anomaly_c_2025": 1.43,          # vs 1850-1900
+    # ----- Companion climate indicators -----
+    # CO2 is NOT stored here. It derives from CLIMATE_2025, which is the single
+    # source of truth. This slot previously held 423.9 ppm (WMO 2025), which
+    # the BAMS State of the Climate in 2025 supersedes at 425.6 ± 0.1 ppm.
+    # See legacy/README.md entry 4.
+    "co2_ppm": co2_ppm(),
+    "co2_ppm_uncertainty": (
+        CLIMATE_2025["greenhouse_gases"]["co2_ppm_uncertainty"]),
+    "co2_pct_of_preindustrial": co2_pct_of_preindustrial(),
+    "temperature_anomaly_c_2025": 1.43,          # vs 1850-1900, WMO 2025
     "temperature_baseline_period": "1850-1900",
     "hottest_11yr_window": "2015-2025",
     "sea_level_rise_mm_per_yr_1993_2011": 2.65,
@@ -578,7 +755,10 @@ EARTH_ENERGY_IMBALANCE = {
         "additive to an already-accelerating imbalance."
     ),
     "sources": [
-        "WMO State of the Global Climate 2025 (March 2026)",
+        "BAMS State of the Climate in 2025 (36th annual, August 2026) "
+        "— CO2, ocean heat, sea level; see CLIMATE_2025",
+        "WMO State of the Global Climate 2025 (March 2026) "
+        "— EEI, partition fractions, temperature anomaly",
         "von Schuckmann et al. 2023, Earth Syst. Sci. Data",
         "Loeb et al. 2021, Geophys. Res. Lett.",
         "IPCC AR6 WG1 Ch. 7",
@@ -803,6 +983,34 @@ def print_summary():
     he = margins["hydrogen_escape"]
     print(f"  Margin: {he['margin_kg_yr']:,.0f} kg/yr ({he['margin_fraction']*100:.1f}% of cap)")
     print(f"  Basis: {he['cap_basis'][:70]}...")
+
+    gh = CLIMATE_2025["greenhouse_gases"]
+    ocean = CLIMATE_2025["ocean"]
+    print(f"\nOBSERVED CLIMATE STATE ({CLIMATE_2025['report']}, "
+          f"published {CLIMATE_2025['published']}):")
+    print(f"  CO2: {gh['co2_ppm']:.1f} ± {gh['co2_ppm_uncertainty']:.1f} ppm "
+          f"({co2_pct_of_preindustrial():.0f}% of pre-industrial, "
+          f"+{co2_pct_of_preindustrial() - 100:.0f}%)")
+    print(f"  Fossil fuel C: {gh['fossil_fuel_c_pg_per_yr']:.1f} ± "
+          f"{gh['fossil_fuel_c_uncertainty_pg']:.1f} Pg C/yr  [record high]")
+    print(f"  Sea level: {ocean['sea_level_mm_above_1993_baseline']:.1f} mm "
+          f"above 1993  [record for the "
+          f"{ocean['sea_level_consecutive_record_years']}th straight year]")
+    print(f"  Sea level rise: {sea_level_rise_mm_yr_total():.1f} mm/yr "
+          f"(thermal {ocean['slr_thermal_expansion_mm_yr_since_2005']:.1f} + "
+          f"ice melt {ocean['slr_ice_melt_mm_yr_since_2005']:.1f}, since 2005)")
+    print(f"  Ocean heat 0-2000m: record high; "
+          f"{ocean['ohc_share_of_excess_heat_50yr']*100:.0f}% of excess heat "
+          f"stored in ocean over 50 yr")
+    print(f"  Marine heatwaves: "
+          f"{ocean['marine_heatwave_surface_fraction']*100:.0f}% of ocean "
+          f"surface affected at least once")
+    print(f"  Temperature: {CLIMATE_2025['temperature']['global_rank']}, "
+          f"under {CLIMATE_2025['temperature']['enso_state']} conditions")
+    unverified = unverified_indicators()
+    if unverified:
+        print(f"  NOT VERIFIED against a retrievable source: "
+              f"{', '.join(unverified)}")
 
     print("\nEARTH ENERGY IMBALANCE (WMO State of the Global Climate 2025):")
     eei_m = margins["earth_energy_imbalance"]

@@ -11,6 +11,21 @@ Copyright (c) 2026 Kavik
 from dataclasses import dataclass, field
 from typing import Dict, List
 
+from .planetary_constants import CLIMATE_2025, sea_level_rise_mm_yr_total
+
+# Observed global mean sea level rise, derived from the BAMS State of the
+# Climate in 2025 component figures (thermal expansion 1.6 ± 0.3 mm/yr +
+# land ice melt 2.0 ± 0.4 mm/yr, both since 2005). Derived, not stored —
+# planetary_constants.CLIMATE_2025 is the single source.
+GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR = sea_level_rise_mm_yr_total()
+
+# Cumulative rise above the 1993 satellite-altimetry baseline: 111.2 mm as of
+# 2025, a record high for the 14th consecutive year.
+GLOBAL_SEA_LEVEL_MM_ABOVE_1993 = (
+    CLIMATE_2025["ocean"]["sea_level_mm_above_1993_baseline"])
+
+_BAMS = "BAMS State of the Climate in 2025 (Aug 2026), global mean components"
+
 
 @dataclass
 class LaunchSiteProfile:
@@ -28,8 +43,14 @@ class LaunchSiteProfile:
     seismic_risk: float = 0.0
     extreme_heat_risk: float = 0.0
 
-    # Sea level rise vulnerability
+    # Sea level rise vulnerability.
+    # Site figures are LOCAL relative rates and legitimately differ from the
+    # global mean — subsidence, ocean dynamics, and glacial isostatic
+    # adjustment all vary regionally. Compare against
+    # GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR via slr_vs_global() rather than
+    # assuming a site figure is wrong because it is not the global number.
     sea_level_rise_mm_per_year: float = 0.0
+    sea_level_rise_source: str = ""
     years_to_inundation_risk: float = float('inf')
 
     # Infrastructure
@@ -41,6 +62,26 @@ class LaunchSiteProfile:
     # Cascade mechanisms
     failure_modes: List[str] = field(default_factory=list)
     coupling_notes: str = ""
+
+    def slr_vs_global(self) -> float:
+        """This site's rate as a multiple of the observed global mean rate."""
+        if GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR <= 0:
+            return float("nan")
+        return self.sea_level_rise_mm_per_year / GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR
+
+    def elevation_headroom_years(self) -> float:
+        """Years of elevation headroom at this site's current SLR rate.
+
+        A deliberately crude upper bound: it assumes a constant rate and
+        ignores storm surge, subsidence beyond what the rate already captures,
+        and the fact that a facility becomes unusable long before mean sea
+        level reaches its elevation. Treat it as an ordering, not a date.
+        `years_to_inundation_risk` is the operationally meaningful figure and
+        is far shorter — 30 years at Boca Chica against 417 here.
+        """
+        if self.sea_level_rise_mm_per_year <= 0:
+            return float("inf")
+        return (self.elevation_m * 1000.0) / self.sea_level_rise_mm_per_year
 
     def risk_score(self) -> float:
         """Composite risk score 0-1."""
@@ -84,6 +125,9 @@ BOCA_CHICA = LaunchSiteProfile(
     flooding_risk=0.25,
     extreme_heat_risk=0.15,
     sea_level_rise_mm_per_year=6.0,
+    sea_level_rise_source="UNATTRIBUTED regional estimate — western Gulf of "
+                          "Mexico subsidence raises local rate above global mean. "
+                          "Not verified against a tide-gauge record.",
     years_to_inundation_risk=30,
     freshwater_stress="high",
     grid_reliability="moderate",
@@ -114,6 +158,8 @@ KENNEDY_SPACE_CENTER = LaunchSiteProfile(
     flooding_risk=0.20,
     extreme_heat_risk=0.10,
     sea_level_rise_mm_per_year=4.0,
+    sea_level_rise_source="UNATTRIBUTED regional estimate — Florida Atlantic "
+                          "coast. Not verified against a tide-gauge record.",
     years_to_inundation_risk=35,
     freshwater_stress="moderate",
     grid_reliability="moderate",
@@ -143,6 +189,8 @@ VANDENBERG = LaunchSiteProfile(
     seismic_risk=0.15,
     extreme_heat_risk=0.10,
     sea_level_rise_mm_per_year=2.0,
+    sea_level_rise_source="UNATTRIBUTED regional estimate — US West Coast "
+                          "rates have run below global mean. Not verified.",
     years_to_inundation_risk=200,
     freshwater_stress="high",
     grid_reliability="low",
@@ -171,6 +219,8 @@ KOUROU = LaunchSiteProfile(
     flooding_risk=0.15,
     extreme_heat_risk=0.10,
     sea_level_rise_mm_per_year=3.0,
+    sea_level_rise_source="UNATTRIBUTED regional estimate — equatorial "
+                          "western Atlantic. Not verified.",
     years_to_inundation_risk=100,
     freshwater_stress="low",
     grid_reliability="moderate",
@@ -196,11 +246,20 @@ def print_site_comparison():
     print(f"\n{'='*70}")
     print(f"LAUNCH SITE VULNERABILITY COMPARISON")
     print(f"{'='*70}")
+    print(f"\n  Global mean sea level rise: "
+          f"{GLOBAL_SEA_LEVEL_RISE_MM_PER_YEAR:.1f} mm/yr "
+          f"({GLOBAL_SEA_LEVEL_MM_ABOVE_1993:.1f} mm above the 1993 baseline, "
+          f"a record for the "
+          f"{CLIMATE_2025['ocean']['sea_level_consecutive_record_years']}th "
+          f"consecutive year)")
+    print(f"  Source: {_BAMS}")
+    print(f"  Site rates are LOCAL and legitimately differ from the global mean.")
     for site in sorted(ALL_SITES, key=lambda s: s.risk_score(), reverse=True):
         print(f"\n  {site.name} ({site.location})")
         print(f"    Composite risk score: {site.risk_score():.2f}")
         print(f"    Elevation: {site.elevation_m}m | "
-              f"SLR: {site.sea_level_rise_mm_per_year} mm/yr")
+              f"SLR: {site.sea_level_rise_mm_per_year} mm/yr "
+              f"({site.slr_vs_global():.2f}x global)")
         print(f"    Water: {site.freshwater_stress} | "
               f"Grid: {site.grid_reliability} | "
               f"Insurance: {site.insurance_market_status}")

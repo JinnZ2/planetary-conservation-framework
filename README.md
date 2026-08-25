@@ -178,7 +178,7 @@ dependency structure is the durable content.
 | Path | What it holds |
 |---|---|
 | `src/` | The framework — checker, constraints, cascade, simulator, materials, locations, constants |
-| `test/` | 79 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
+| `test/` | 90 unit tests (`python -m unittest discover -s test -p "test_*.py"`) |
 | `data/` | Current constraint margins and pre-defined scenarios |
 | `examples/` | Runnable demos (`python -m examples.check_proposal`) |
 | `tools/` | Maintenance utilities |
@@ -207,6 +207,33 @@ All constraint values include sources and confidence levels. See
 ESA Space Debris Office, USGS Mineral Commodity Summaries, NASA Orbital
 Debris Program Office, NOAA atmospheric monitoring, insurance industry
 reports, IPCC assessment reports.
+
+Observed climate state comes from the BAMS **State of the Climate in 2025**
+(36th annual, American Meteorological Society, published August 2026 — 625
+scientists, 60 countries), held in `src/planetary_constants.CLIMATE_2025` as
+the single source of truth:
+
+| Indicator | 2025 | Verified |
+|---|---|---|
+| CO₂ | 425.6 ± 0.1 ppm (+53% over pre-industrial) | ✅ |
+| Fossil fuel carbon | 10.3 ± 0.5 Pg C/yr — record high | ✅ |
+| Sea level | 111.2 mm above 1993 — record for the 14th straight year | ✅ |
+| Sea level rise | 3.6 mm/yr since 2005 (1.6 thermal + 2.0 ice melt) | ✅ |
+| Ocean heat 0–2000 m | record high; ~90% of excess heat | ✅ |
+| Marine heatwaves | 87% of ocean surface affected at least once | ✅ |
+| Temperature | 2nd–3rd warmest, **with no El Niño** | ✅ |
+| CH₄ 1,935.7 ppb / N₂O 338.9 ppb | record-high *status* confirmed, values not | ❌ |
+| Cryosphere, tropical cyclones | not confirmable from this environment | ❌ |
+
+Indicators marked ❌ carry `verified: False` and are listed by
+`unverified_indicators()`, which `print_summary()` prints. They are carried
+because omitting data is also a choice — but they must not be cited as
+established. AMS primary domains were unreachable from the authoring
+environment, so even the ✅ rows rest on independent secondary retrieval.
+
+The absence of an El Niño is the load-bearing fact. The 2023–2024 records were
+partly ENSO-driven and could be discounted as such; a record set under
+neutral-to-La Niña conditions cannot.
 
 ## Contributing
 

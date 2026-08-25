@@ -94,7 +94,14 @@ CONSTANTS = {
 
     # ── Forcing → CO2 equivalence (for sticker benefit calc) ────
     "co2_forcing_constant": 5.35,                 # ΔF = 5.35 × ln(C/C0)
-    "current_co2_ppm": 423.9,                     # WMO 2025
+    # MIRROR of src/planetary_constants.CLIMATE_2025 greenhouse_gases.co2_ppm.
+    # This module advertises zero dependencies and must stay importable on its
+    # own, so it carries a copy rather than an import. The copy is drift-tested
+    # (TestClimate2025.test_sai_audit_co2_matches_canonical) — if you change
+    # one, change both, or the test fails naming this line.
+    # Source: BAMS State of the Climate in 2025 (36th annual, August 2026).
+    # Was 423.9 (WMO 2025) before 2026-08-25; see legacy/README.md entry 4.
+    "current_co2_ppm": 425.6,
     "gt_c_per_ppm_co2": 2.13,
     "co2_to_c_molar": 3.67,                       # 44/12
 
