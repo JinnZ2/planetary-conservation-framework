@@ -72,15 +72,43 @@
       "ice": 0.03,
       "atmosphere": 0.01
     },
-    "co2_ppm": 423.9,
-    "co2_pct_of_preindustrial": 152,
+    "co2_ppm": 425.6,
+    "co2_ppm_uncertainty": 0.1,
+    "co2_pct_of_preindustrial": 153.1,
     "temperature_anomaly_c_2025": 1.43,
     "temperature_baseline_period": "1850-1900",
     "hottest_11yr_window": "2015-2025",
     "sea_level_rise_mm_per_yr_2012_2025": 4.75,
     "record_year": 2025,
-    "notes": "WMO 2025: EEI at 65-year record high. Rate of ocean heat uptake more than doubled from 1960-2005 to 2005-2025.",
-    "source": "WMO State of the Global Climate 2025 (March 2026); von Schuckmann et al. 2023; Loeb et al. 2021",
-    "as_of": "2026-03"
+    "notes": "WMO 2025: EEI at 65-year record high. Rate of ocean heat uptake more than doubled from 1960-2005 to 2005-2025. CO2 updated 2026-08-25 from 423.9 (WMO) to 425.6 (BAMS State of the Climate in 2025) — see legacy/README.md entry 4.",
+    "source": "BAMS State of the Climate in 2025 (36th annual, August 2026) for CO2; WMO State of the Global Climate 2025 (March 2026) for EEI and temperature; von Schuckmann et al. 2023; Loeb et al. 2021",
+    "as_of": "2026-08"
+  },
+  "observed_climate_2025": {
+    "_comment": "Mirrors src/planetary_constants.CLIMATE_2025, which is the single source of truth. Drift-tested by TestClimate2025.test_current_state_json_matches_canonical.",
+    "report": "State of the Climate in 2025 (36th annual)",
+    "publisher": "American Meteorological Society",
+    "published": "2026-08",
+    "citation": "Bull. Amer. Meteor. Soc. Vol. 107, No. 8 (supplement)",
+    "co2_ppm": 425.6,
+    "fossil_fuel_c_pg_per_yr": 10.3,
+    "sea_level_mm_above_1993_baseline": 111.2,
+    "sea_level_consecutive_record_years": 14,
+    "sea_level_rise_mm_per_yr_since_2005": 3.6,
+    "slr_thermal_expansion_mm_yr": 1.6,
+    "slr_ice_melt_mm_yr": 2.0,
+    "ocean_heat_0_2000m_record_high": true,
+    "marine_heatwave_surface_fraction": 0.87,
+    "temperature_rank": "2nd or 3rd warmest on record",
+    "warmest_without_el_nino": true,
+    "unverified": [
+      "greenhouse_gases.ch4",
+      "greenhouse_gases.n2o",
+      "ocean.sst",
+      "cryosphere",
+      "tropical_cyclones"
+    ],
+    "verification_note": "AMS primary domains were unreachable from the authoring environment; figures rest on independent secondary retrieval. Items in 'unverified' were not confirmable at all and must not be cited as established.",
+    "as_of": "2026-08-25"
   }
 }

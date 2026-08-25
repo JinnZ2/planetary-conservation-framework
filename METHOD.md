@@ -84,7 +84,7 @@ creates drift there. Reconcile across both repos first.
 Before publishing any output in a README, docstring, or example:
 
 ```bash
-python -m unittest discover -s test -p "test_*.py"   # 79 tests
+python -m unittest discover -s test -p "test_*.py"   # 90 tests
 python -m examples.check_proposal                     # all six demos
 ```
 

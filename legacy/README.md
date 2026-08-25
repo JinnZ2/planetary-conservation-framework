@@ -204,3 +204,84 @@ with its own derivation. Derive it, or test that it matches.
 re-verified against primary sources. Only cobalt carries
 `production_verified: True`. The rest should be checked and stamped the same
 way — the audit that found cobalt did not clear the others.
+
+---
+
+### 4. CO₂ concentration — superseded, and the second copy caught in time
+
+**Status:** superseded 2026-08-25. WMO figure replaced by BAMS State of the
+Climate in 2025.
+
+**The superseded claim**, as it stood in `src/planetary_constants.py`:
+
+```python
+    # ----- Companion climate indicators (WMO 2025) -----
+    "co2_ppm": 423.9,
+    "co2_ppm_uncertainty": 0.2,
+    "co2_pct_of_preindustrial": 152,
+```
+
+and in the module header comment:
+
+```
+#   • CO2 reached 423.9 ± 0.2 ppm (152% of pre-industrial).
+```
+
+**What superseded it.** The 36th annual *State of the Climate in 2025*
+(American Meteorological Society, published August 2026 as a supplement to
+BAMS Vol. 107 No. 8; 625 scientists, 60 countries) reports globally averaged
+CO₂ at **425.6 ± 0.1 ppm**, a 53% increase over the pre-industrial ~278 ppm.
+Tighter uncertainty, later publication, and the calendar year the repo already
+claimed to describe.
+
+**The part that mattered more than the number.** CO₂ was stored in *two*
+places:
+
+| Location | Value |
+|---|---|
+| `src/planetary_constants.py:562` | 423.9 |
+| `stratospheric_aerosol_injection_audit.py:97` | 423.9 |
+
+They agreed — for now. The SAI audit does not merely display its copy, it
+*computes* with it (`reduction_ppm = C["current_co2_ppm"] * (1.0 - ratio)`),
+so a one-sided update would have silently changed that module's carbon-offset
+arithmetic while leaving no visible disagreement anywhere. This is the cobalt
+pattern from entry 3, caught before it drifted rather than after.
+
+**Fix.** `CLIMATE_2025` is now the single source of truth for observed climate
+indicators. `EARTH_ENERGY_IMBALANCE["co2_ppm"]` derives from it;
+`co2_pct_of_preindustrial()` is computed, never stored (153.1%, not the stored
+152). The SAI audit keeps a deliberate mirror — it advertises zero dependencies
+and must stay independently importable — but the mirror is drift-tested by
+`TestClimate2025.test_sai_audit_co2_matches_canonical`, confirmed to fail when
+the old value is reintroduced.
+
+**Verification status, stated rather than implied.** AMS primary domains
+(`ametsoc.org`, `journals.ametsoc.org`, `ametsoc.net`) were egress-blocked from
+this environment, so every figure rests on independent secondary retrieval.
+Confirmed: CO₂ 425.6 ± 0.1 ppm, fossil fuel carbon 10.3 ± 0.5 Pg C/yr, sea
+level 111.2 mm above the 1993 baseline for a 14th consecutive record year,
+thermal expansion 1.6 ± 0.3 mm/yr and land ice melt 2.0 ± 0.4 mm/yr since 2005,
+ocean heat content 0–2000 m at a record high, 87% of the ocean surface hit by at
+least one marine heatwave.
+
+**Not confirmed, and flagged in the data itself:** methane 1,935.7 ppb, nitrous
+oxide 338.9 ppb (record-high *status* confirmed, values not), sea surface
+temperature rank, and the entire cryosphere and tropical-cyclone groups. These
+carry `verified: False` and are listed by `unverified_indicators()`, which
+`print_summary()` prints. Carried because omission is also a choice — but they
+must not be cited as established.
+
+**A dating discrepancy worth recording.** The figures arrived described as the
+"36th annual report, published August 2025, covering the 2025 calendar year."
+Those three facts are not mutually consistent: a report covering calendar 2025
+cannot be published in August 2025, and the 35th annual (covering 2024) is the
+one that appeared in August 2025. The 36th, covering 2025, was published
+**August 2026** — confirmed by AMS's own posting date of 2026-08-10. The
+internally consistent reading was adopted. Recording this because a
+publication date is part of a citation, and a framework that demands source
+attribution cannot be casual about which year a source describes.
+
+**Standing lesson:** a duplicated constant is a latent falsification, waiting
+for one copy to be updated. Both copies agreed right up until the moment one of
+them was right.
