@@ -7,7 +7,7 @@ infrastructure scenarios.
 
 Core principle: dM_earth = M_in - M_out (conservation is non-negotiable)
 
-Author: Kavik + Claude
+Author: JinnZ2 + Claude
 Repository: https://github.com/JinnZ2/planetary-conservation-framework
 """
 

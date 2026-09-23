@@ -15,7 +15,7 @@ propagation.
 
 Schema is versioned. Breaking changes increment major version.
 
-Author: Kavik + Claude
+Author: JinnZ2 + Claude
 Repository: https://github.com/JinnZ2/planetary-conservation-framework
 """
 

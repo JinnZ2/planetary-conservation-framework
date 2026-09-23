@@ -11,7 +11,7 @@ This is not philosophy. This is a known biological mechanism
 with measurable neurological signatures, treated here as a
 system constraint equivalent to thermodynamic limits.
 
-Author: Kavik + Claude
+Author: JinnZ2 + Claude
 Repository: https://github.com/JinnZ2/planetary-conservation-framework
 """
 
