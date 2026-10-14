@@ -1,3 +1,6 @@
+> Before reading or editing anything here, read READ_ME_THIS_WAY.md.
+> Mismatches, dead ends and odd names in this repo are kept on purpose.
+
 # Planetary Conservation Framework
 
 **A physics-based constraint system for evaluating space infrastructure proposals
