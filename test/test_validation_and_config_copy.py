@@ -6,7 +6,7 @@ Two cases ported from 00fea0f:
 Each test also runs the earlier behaviour, so the difference is visible.
 
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-Copyright (c) 2026 Kavik
+Copyright (c) 2026 JinnZ2
 """
 
 import os

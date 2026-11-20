@@ -3,7 +3,7 @@ Physical constants and current baseline values for planetary constraints.
 All values include sources and measurement dates.
 
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-Copyright (c) 2026 Kavik
+Copyright (c) 2026 JinnZ2
 """
 
 from dataclasses import dataclass, field

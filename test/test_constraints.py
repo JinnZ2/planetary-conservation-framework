@@ -2,7 +2,7 @@
 Basic tests for constraint evaluation.
 
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-Copyright (c) 2026 Kavik
+Copyright (c) 2026 JinnZ2
 """
 
 import unittest

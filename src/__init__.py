@@ -5,7 +5,7 @@ A physics-based constraint system for evaluating space infrastructure
 proposals against Earth's remaining planetary margins.
 
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-Copyright (c) 2026 Kavik
+Copyright (c) 2026 JinnZ2
 """
 
 from .checker import ConstraintChecker

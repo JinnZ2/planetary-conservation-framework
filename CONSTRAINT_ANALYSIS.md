@@ -3,7 +3,7 @@
 **Version:** 0.1.0
 **Date:** 2026-02-27
 **License:** CC BY-SA 4.0
-**Authors:** Kavik, with analytical support from Claude (Anthropic)
+**Authors:** JinnZ2, with analytical support from Claude (Anthropic)
 
 ---
 

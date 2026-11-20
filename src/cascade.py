@@ -5,7 +5,7 @@ Models the cascade interactions between subsystem constraints.
 When one constraint degrades, it affects others through defined coupling paths.
 
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-Copyright (c) 2026 Kavik
+Copyright (c) 2026 JinnZ2
 """
 
 from dataclasses import dataclass, field
