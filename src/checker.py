@@ -141,6 +141,17 @@ class ConstraintChecker:
             rare_earth_kg_per_year: float
             material_requirements_kg: dict
         """
+        # Note 2026-11-20: the docstring lists these five as required, but nothing checked
+        # them; a proposal without them was scored on defaults. Ported from 00fea0f
+        # (claude/add-claude-documentation-qM30L).
+        REQUIRED_FIELDS = ["name", "launches_per_year", "propellant_type",
+                           "orbital_mass_kg", "duration_years"]
+        missing = [f for f in REQUIRED_FIELDS if f not in proposal]
+        if missing:
+            raise ValueError(
+                f"Proposal missing required fields: {', '.join(missing)}"
+            )
+
         timestamp = datetime.utcnow().isoformat()
         name = proposal.get("name", "Unnamed Proposal")
 

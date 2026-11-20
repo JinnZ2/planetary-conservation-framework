@@ -104,7 +104,10 @@ class Simulator:
     """
 
     def __init__(self, config: ScenarioConfig = None):
-        self.config = config or ScenarioConfig()
+        # Note 2026-11-20: was `config or ScenarioConfig()`, which kept the caller's own
+        # object. A change to that object after construction changed this simulator too.
+        # Ported from 00fea0f (claude/add-claude-documentation-qM30L).
+        self.config = deepcopy(config) if config else ScenarioConfig()
         self.history: List[SystemState] = []
 
     def run(self, n_runs: int = 1, seed: int = None) -> List[List[SystemState]]:
